@@ -25,10 +25,13 @@ The design is limited to machines that verify:
 
 * **Requisites for compiling a kernel module**. Some packages are required if you have not  compiled a module driver ever. That is to say, you will need to install the kernel headers and the compilation tools.
   * For Ubuntu:
+  
   ```
   sudo apt-get install gcc make linux-headers-$(uname -r) #Ubuntu
   ```
+  
   * For RHEL/CentOS/Oracle Linux:
+  
   ```
   su -
   yum install gcc make kernel kernel-devel  #RHEL/CentOS
@@ -41,23 +44,30 @@ The design is limited to machines that verify:
    
   In order to use huge pages, some **kernel parameters** have to be included. For this purpose:
   1. Edit the entries under grub:
+
   ```
   sudo gedit /etc/default/grub
   ```
+
   2. Find the line starting with *GRUB_CMDLINE_LINUX_DEFAULT*. We will configure 2 pages for this case (*Vivado might use some of the huge pages* so be careful with this detail):
+
   ```
   GRUB_CMDLINE_LINUX_DEFAULT="default_hugepagesz=1G hugepagesz=1G hugepages=2 ... previous options ..."
   ```
+
   3. Finally update GRUB's configuration file
+
   ```
   sudo update-grub
   ```
 
 
 * **Vivado Suite**. If you need to rebuild the project, a valid license for the *7 Series Integrated Block for PCI Express (PCIe)* core IP of Xilinx is required. If this is your case you will also need to add *vivado* executable to your *PATH*. It is basically done with the following command:
+
   ```
   source /opt/Xilinx/Vivado/2014.4/settings64.sh
   ```
+
   where */opt/Xilinx/Vivado/2014.4* is the installation directory of the Xilinx packages.
 
 
@@ -195,28 +205,39 @@ It is recommendable that you restart the design prior to any measurement. It mea
 
 ```
 cd HOST
-sh restart.sh; sh bin/benchmark [OPTIONS]
+sh restart.sh; ./bin/benchmark [OPTIONS]
 ```
 
 Some examples:
+
 * Test PCIe 1. Transfer 512 MiB to the FPGA from the HOST
+  
   ```
-  sh restart.sh; sh bin/benchmark -d W -p FIX 0 -n 512m -l 1
+  sh restart.sh; ./bin/benchmark -d W -p FIX 0 -n 512m -l 1
   ```
+
 * Test PCIe 2. Transfer 512 MiB to the FPGA from the HOST: repeat it 1000 times:
+
   ```
-  sh restart.sh; sh bin/benchmark -d W -p FIX 0 -n 512m -l 1000
+  sh restart.sh; ./bin/benchmark -d W -p FIX 0 -n 512m -l 1000
   ```
+
 * Test PCIe 3. Transfer 512 MiB from the FPGA to the HOST. Then read back from the HOST to the FPGA: repeat it 1000 times:
+ 
   ```
-  sh restart.sh; sh bin/benchmark -d RW -p FIX 0 -n 512m -l 1000
+  sh restart.sh; ./bin/benchmark -d RW -p FIX 0 -n 512m -l 1000
   ```
+
 * Test PCIe 4. Transfer 8B from the FPGA to the HOST to random positions inside a buffer of 512MiB
+ 
   ```
-  sh restart.sh; sh bin/benchmark -d RW -p RAN 0 512m -n 8 -l 1
+  sh restart.sh; ./bin/benchmark -d RW -p RAN 0 512m -n 8 -l 1
   ```
+
 * Test PCIe 5. Transfer 8B from the FPGA to the HOST to random positions inside a buffer of 512MiB (which is unaligned by 28 bytes)
+  
   ```
-  sh restart.sh; sh bin/benchmark -d RW -p RAN 28 512m -n 8 -l 1
+  sh restart.sh; ./bin/benchmark -d RW -p RAN 28 512m -n 8 -l 1
   ```
+
 Feel free to explore other options! 
