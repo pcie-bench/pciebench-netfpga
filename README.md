@@ -1,4 +1,4 @@
-# PCIe Benchmark for 7 Series FPGAs of Xilinx
+# PCIe Benchmark for 7 Series FPGAs of Xilinx #
 
 This project presents a **framework** that facilitates the evaluation and **measurement of PCIe features**. It is generic, and can be implemented on a number of different PCIe devices. It thus allows to compare different PCIe implementation with each others. The provided methodology has been developed
 on both **commercial** (i.e., Xilinx Virtex-7 FPGA VC709 Connectivity Kit) **and research** (i.e.,NetFPGA SUME) oriented **boards**.
@@ -10,7 +10,7 @@ Additional sections are presented in this document in order to offer a guide for
 
 
 
-## <a name="section_requisites"></a>Requisites of the system
+## <a name="section_requisites"></a>Requisites of the system ##
 
 The design is limited to machines that verify:
 
@@ -240,4 +240,4 @@ Some examples:
   sh restart.sh; ./bin/benchmark -d RW -p RAN 28 512m -n 8 -l 1
   ```
 
-Feel free to explore other options! 
+Feel free to explore other options!
