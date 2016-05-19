@@ -10,7 +10,6 @@ must start at byte 0 in the AXI stream interface. Straddle option not supported.
  Copyright (c) 2016
  All rights reserved.
 
- as part of the DARPA MRC research programme.
 
  @NETFPGA_LICENSE_HEADER_START@
 

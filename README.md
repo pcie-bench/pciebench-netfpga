@@ -3,12 +3,12 @@
 This project presents a **framework** that facilitates the evaluation and **measurement of PCIe features**. It is generic, and can be implemented on a number of different PCIe devices. It thus allows to compare different PCIe implementation with each others. The provided methodology has been developed
 on both **commercial** (i.e., Xilinx Virtex-7 FPGA VC709 Connectivity Kit) **and research** (i.e.,NetFPGA SUME) oriented **boards**.
 
-It is recommended that the user gets familiar with the [requisites](#section_requisites) of the workstation prior to any other task. Once that all the requirements are satisfied, some further [configuration](#section_configuration) of the system may be required. 
+It is recommended that the user gets familiar with the requisites of the workstation prior to any other task. Once that all the requirements are satisfied, some further configuration of the system may be required. 
 
-Additional sections are presented in this document in order to offer a guide for the generation of the [hardware project](#section_hw) and the usage of the [software](#section_sw). 
+Additional sections are presented in this document in order to offer a guide for the generation of the hardware project and the usage of the software. 
 
 
-## <a name="section_requisites"></a>Requisites of the system
+## Requisites of the system
 
 The design is limited to machines that verify:
 
@@ -18,7 +18,7 @@ The design is limited to machines that verify:
 
 
 
-## <a name="section_configuration"></a>How to configure the system
+## How to configure the system
 
 
 * **Requisites for compiling a kernel module**. Some packages are required if you have not  compiled a module driver ever. That is to say, you will need to install the kernel headers and the compilation tools.
@@ -83,7 +83,7 @@ Two folders can be observed under the root of the git project:
   * **HOST/Makefile**: The main makefile of the software sources. It will invoke inner makefiles.
 
 
-## <a name="section_hw"></a>Building the hardware project
+## Building the hardware project
 
 If your environment has been previously configured, you just need to clone the repo, "cd" to that path and follow the next steps:
 
@@ -137,7 +137,7 @@ The possible inconveniences might be related to the dependencies of the project 
   ```
 
 
-## <a name="section_sw"></a>Software
+## Software
 ###Compiling the software
 
 It should be a straightforward activity, after cloning the repository you just need to execute the following commands:

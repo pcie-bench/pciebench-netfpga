@@ -2,7 +2,6 @@
 // Copyright (c) 2016
 // All rights reserved.
 //
-// as part of the DARPA MRC research programme.
 //
 // @NETFPGA_LICENSE_HEADER_START@
 //
