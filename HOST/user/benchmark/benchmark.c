@@ -410,11 +410,10 @@ int main(int argc, char **argv)
       dlist[i].index = (dlist[i].index + 1) % MAX_DMA_DESCRIPTORS;
       readDescriptor(&(dlist[i]));
 
-      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is we warmed up
+      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is going to be warmed up
         if (args.pat == RAN) {
           warm_cache((uint64_t *)((uint8_t *)pmem + (uint64_t)((dlist[i].address >> 2) << 2)), args.prop.pran.nsystempages * KERNEL_PAGE_SIZE);
         }
-        break;
       }
 
       fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_req * 4, dlist[i].bytes_at_req * 4, dlist[i].time_at_req ? args.nbytes * 8.0 / (dlist[i].time_at_req * 4) : 0);
