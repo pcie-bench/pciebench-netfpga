@@ -95,10 +95,7 @@ module dma_engine_manager #(
   output reg                       VALID_ENGINE             ,
   output reg  [              63:0] DESCRIPTOR_ADDR          ,
   output reg  [              63:0] DESCRIPTOR_SIZE          ,
-  output reg  [              63:0] DESCRIPTOR_MAX_TIMEOUT   ,
   output reg  [              63:0] WINDOW_SIZE              ,
-  input  wire                      HW_REQUEST_TRANSFERENCE  ,
-  input  wire [              63:0] HW_NEW_SIZE_AT_DESCRIPTOR,
   input  wire                      UPDATE_LATENCY           ,
   input  wire [              63:0] CURRENT_LATENCY          ,
   input  wire [              63:0] TIME_AT_REQ              ,
@@ -115,7 +112,6 @@ module dma_engine_manager #(
   localparam c_offset_between_descriptors = 10'h8;
   localparam c_offset_engines_config      = 10'h4; // Descriptor j of engine i will be at position  C_ENGINE_TABLE_OFFSET  + j*c_offset_between_descriptors + c_offset_engines_config
 
-  reg ack_pending_r           ;
   reg mem_ack_pending_pipe_1_r, mem_ack_pending_pipe_2_r, mem_ack_pending_pipe_3_r;
 
   always @(negedge RST_N or posedge CLK) begin
@@ -125,7 +121,6 @@ module dma_engine_manager #(
       mem_ack_pending_pipe_2_r <= 1'b0;
       mem_ack_pending_pipe_3_r <= 1'b0;
     end else begin
-      // mem_ack_pending_pipe_1_r <= (S_MEM_IFACE_EN & !HW_REQUEST_TRANSFERENCE) || (ack_pending_r);
       mem_ack_pending_pipe_1_r <= S_MEM_IFACE_EN;
       mem_ack_pending_pipe_2_r <= mem_ack_pending_pipe_1_r;
       mem_ack_pending_pipe_3_r <= mem_ack_pending_pipe_2_r;
@@ -133,13 +128,6 @@ module dma_engine_manager #(
     end
   end
 
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      ack_pending_r <= 1'b0;
-    end else begin
-      ack_pending_r <= (S_MEM_IFACE_EN & HW_REQUEST_TRANSFERENCE);
-    end
-  end
 
 
   // DMA engine registers implementation
@@ -149,7 +137,6 @@ module dma_engine_manager #(
   reg        stop_r        ;
   reg        error_r       ;
   reg [ 1:0] capabilities_r;
-  reg        irq_pending_r ;
   reg [63:0] time_r        ;
   reg [63:0] byte_count_r  ;
 
@@ -161,10 +148,6 @@ module dma_engine_manager #(
   reg                                 is_engine_read_r         ;
   reg                                 cl_engine_stats_r        ;
   reg [$clog2(C_NUM_DESCRIPTORS)-1:0] active_index_descriptor_r;
-
-  // Maximum time, express in nanoseconds that the engine will wait before forcing a transference
-  // This is useful for network-oriented applications. Just applicable in the C2S direction.
-  reg [63:0] max_timeout_r;
   reg [63:0] window_size_r;
 
   //////////////////////////
@@ -226,20 +209,18 @@ module dma_engine_manager #(
 
   assign is_end_of_operation_s = CONTROL_BYTE[3];
   assign operation_error_s     = CONTROL_BYTE[4];
-  assign STATUS_BYTE           = {irq_pending_r,capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
+  assign STATUS_BYTE           = {1'b0,capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
 
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
       DESCRIPTOR_ADDR        <= 64'h0;
       DESCRIPTOR_SIZE        <= 64'h0;
-      DESCRIPTOR_MAX_TIMEOUT <= 64'h0;
       WINDOW_SIZE            <= C_DEFAULT_WINDOW_SIZE;
     end else begin
       DESCRIPTOR_ADDR        <= doutb_address_s;
       DESCRIPTOR_SIZE        <= doutb_size_s;
       WINDOW_SIZE            <= window_size_r;
-      DESCRIPTOR_MAX_TIMEOUT <= { 2'h0, max_timeout_r[63:2]}; // The clock has a 4 ns period, calculate the number of inactive cycles.
     end
   end
 
@@ -263,7 +244,7 @@ module dma_engine_manager #(
     end else begin
       if(is_end_of_operation_s) begin // If the user chooses another ENGINE or an operation finishes disable the valid signal.
         VALID_ENGINE <= !(active_index_descriptor_r == last_index_descriptor_r);
-      end else if(ACTIVE_ENGINE == active_engine_pipe_r && active_index_descriptor_r == active_index_descriptor_pipe_r && !stop_r) begin
+      end else if(ACTIVE_ENGINE == active_engine_pipe_r && active_index_descriptor_r == active_index_descriptor_pipe_r && enable_r) begin
         VALID_ENGINE <= 1'h1;
       end else begin
         VALID_ENGINE <= 1'h0;
@@ -283,7 +264,6 @@ module dma_engine_manager #(
       cl_engine_stats_r       <= 1'b0;
       last_index_descriptor_r <= 0;
       capabilities_r          <= 2'b10; // S2C by default
-      max_timeout_r           <= C_DEFAULT_TIMEOUT;
       window_size_r           <= C_DEFAULT_WINDOW_SIZE;
     end else begin
       reset_r           <= 1'b0; // Automatically clean the reset_r after one cycle.
@@ -310,16 +290,6 @@ module dma_engine_manager #(
               if(S_MEM_IFACE_WE[0]) last_index_descriptor_r[7:0]                                <= S_MEM_IFACE_DIN[7:0];
               if(S_MEM_IFACE_WE[1]) last_index_descriptor_r[`CLOG2(C_NUM_DESCRIPTORS)-1:8]      <= S_MEM_IFACE_DIN[`CLOG2(C_NUM_DESCRIPTORS)-1:8];
             end
-          end
-          C_ENGINE_TABLE_OFFSET  + 2: begin
-            if(S_MEM_IFACE_WE[0]) max_timeout_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
-            if(S_MEM_IFACE_WE[1]) max_timeout_r[15:8]   <= S_MEM_IFACE_DIN[15:8];
-            if(S_MEM_IFACE_WE[2]) max_timeout_r[23:16]  <= S_MEM_IFACE_DIN[23:16];
-            if(S_MEM_IFACE_WE[3]) max_timeout_r[31:24]  <= S_MEM_IFACE_DIN[31:24];
-            if(S_MEM_IFACE_WE[4]) max_timeout_r[39:32]  <= S_MEM_IFACE_DIN[39:32];
-            if(S_MEM_IFACE_WE[5]) max_timeout_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
-            if(S_MEM_IFACE_WE[6]) max_timeout_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
-            if(S_MEM_IFACE_WE[7]) max_timeout_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
           end
           C_ENGINE_TABLE_OFFSET  + 3: begin
             if(S_MEM_IFACE_WE[0]) window_size_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
@@ -617,7 +587,7 @@ module dma_engine_manager #(
       if(S_MEM_IFACE_EN) begin
         case(S_MEM_IFACE_ADDR)
           C_ENGINE_TABLE_OFFSET : begin  // Control byte of DMA engine
-            rdata_engine_r   <= { {C_DATA_WIDTH-8{1'b0}},irq_pending_r,capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
+            rdata_engine_r   <= { {C_DATA_WIDTH-7{1'b0}},capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
             is_engine_read_r <= 1'b1;
           end
           C_ENGINE_TABLE_OFFSET  + 1: begin
@@ -666,22 +636,18 @@ module dma_engine_manager #(
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
-      stop_r        <= 1'b1;
+      stop_r        <= 1'b0;
       error_r       <= 1'b0;
-      irq_pending_r <= 1'b0;
     end else begin
       if( cl_engine_stats_r ) begin
         stop_r        <= 1'b0;
         error_r       <= 1'b0;
-        irq_pending_r <= 1'b0;
       end else begin
-        stop_r        <= is_end_of_operation_s && (active_index_descriptor_r == last_index_descriptor_r) ? 1'b1 : stop_r;
+        stop_r        <= is_end_of_operation_s && (active_index_descriptor_r == last_index_descriptor_r) ? 1'b1 : 1'b0;
         error_r       <= operation_error_s;
-        irq_pending_r <= irq_pending_r;
       end
     end
   end
-
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
