@@ -7,27 +7,27 @@
 @brief Design containing  the DMA requester interface
 
 
-Copyright (c) 2016
-All rights reserved.
+ Copyright (c) 2016
+ All rights reserved.
 
 
-@NETFPGA_LICENSE_HEADER_START@
+ @NETFPGA_LICENSE_HEADER_START@
 
-Licensed to NetFPGA C.I.C. (NetFPGA) under one or more contributor
-license agreements.  See the NOTICE file distributed with this work for
-additional information regarding copyright ownership.  NetFPGA licenses this
-file to you under the NetFPGA Hardware-Software License, Version 1.0 (the
-"License"); you may not use this file except in compliance with the
-License.  You may obtain a copy of the License at:
+ Licensed to NetFPGA C.I.C. (NetFPGA) under one or more contributor
+ license agreements.  See the NOTICE file distributed with this work for
+ additional information regarding copyright ownership.  NetFPGA licenses this
+ file to you under the NetFPGA Hardware-Software License, Version 1.0 (the
+ "License"); you may not use this file except in compliance with the
+ License.  You may obtain a copy of the License at:
 
-http://www.netfpga-cic.org
+   http://www.netfpga-cic.org
 
-Unless required by applicable law or agreed to in writing, Work distributed
-under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations under the License.
+ Unless required by applicable law or agreed to in writing, Work distributed
+ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ CONDITIONS OF ANY KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations under the License.
 
-@NETFPGA_LICENSE_HEADER_END@
+ @NETFPGA_LICENSE_HEADER_END@
 
 
 */
@@ -77,62 +77,60 @@ module dma_rq_logic #(
   parameter                                           C_AXI_KEEP_WIDTH = (C_BUS_DATA_WIDTH/8),
   parameter C_WINDOW_SIZE           = 16 ,
   parameter C_LOG2_MAX_PAYLOAD      = 8  , // 2**C_LOG2_MAX_PAYLOAD in bytes
-  parameter C_LOG2_MAX_READ_REQUEST = 14 , // 2**C_LOG2_MAX_READ_REQUEST in bytes
-  parameter C_NITERATIONS           = 8  , //8388608, // 8M
-  parameter C_MODE                  = 1    // Benchmarking
+  parameter C_LOG2_MAX_READ_REQUEST = 14   // 2**C_LOG2_MAX_READ_REQUEST in bytes
 ) (
-  input  wire                        CLK                ,
-  input  wire                        RST_N              ,
+  input  wire                        CLK                      ,
+  input  wire                        RST_N                    ,
   ////////////
   //  PCIe Interface: 1 AXI-Stream (requester side)
   ////////////
-  output wire [C_BUS_DATA_WIDTH-1:0] M_AXIS_RQ_TDATA    ,
-  output wire [                59:0] M_AXIS_RQ_TUSER    ,
-  output wire                        M_AXIS_RQ_TLAST    ,
-  output wire [C_BUS_KEEP_WIDTH-1:0] M_AXIS_RQ_TKEEP    ,
-  output wire                        M_AXIS_RQ_TVALID   ,
-  input  wire [                 3:0] M_AXIS_RQ_TREADY   ,
-  input  wire [C_BUS_DATA_WIDTH-1:0] S_AXIS_RC_TDATA    ,
-  input  wire [                74:0] S_AXIS_RC_TUSER    ,
-  input  wire                        S_AXIS_RC_TLAST    ,
-  input  wire [C_BUS_KEEP_WIDTH-1:0] S_AXIS_RC_TKEEP    ,
-  input  wire                        S_AXIS_RC_TVALID   ,
-  input  wire [                21:0] S_AXIS_RC_TREADY   ,
+  output wire [C_BUS_DATA_WIDTH-1:0] M_AXIS_RQ_TDATA          ,
+  output wire [                59:0] M_AXIS_RQ_TUSER          ,
+  output wire                        M_AXIS_RQ_TLAST          ,
+  output wire [C_BUS_KEEP_WIDTH-1:0] M_AXIS_RQ_TKEEP          ,
+  output wire                        M_AXIS_RQ_TVALID         ,
+  input  wire [                 3:0] M_AXIS_RQ_TREADY         ,
+  input  wire [C_BUS_DATA_WIDTH-1:0] S_AXIS_RC_TDATA          ,
+  input  wire [                74:0] S_AXIS_RC_TUSER          ,
+  input  wire                        S_AXIS_RC_TLAST          ,
+  input  wire [C_BUS_KEEP_WIDTH-1:0] S_AXIS_RC_TKEEP          ,
+  input  wire                        S_AXIS_RC_TVALID         ,
+  input  wire [                21:0] S_AXIS_RC_TREADY         ,
   ////////////
   //  c2s fifo interface: 1 AXI-Stream (data to be transferred in memory write requests)
   ////////////
-  output wire                        C2S_FIFO_TREADY    ,
-  input  wire [C_BUS_DATA_WIDTH-1:0] C2S_FIFO_TDATA     ,
-  input  wire                        C2S_FIFO_TLAST     ,
-  input  wire                        C2S_FIFO_TVALID    ,
-  input  wire [C_AXI_KEEP_WIDTH-1:0] C2S_FIFO_TKEEP     ,
+  output wire                        C2S_FIFO_TREADY          ,
+  input  wire [C_BUS_DATA_WIDTH-1:0] C2S_FIFO_TDATA           ,
+  input  wire                        C2S_FIFO_TLAST           ,
+  input  wire                        C2S_FIFO_TVALID          ,
+  input  wire [C_AXI_KEEP_WIDTH-1:0] C2S_FIFO_TKEEP           ,
   ////////////
   //  Descriptor interface: Interface with the necessary data to complete a memory read/write request.
   ////////////
-  input  wire                        ENGINE_VALID       ,
-  input  wire [                 7:0] STATUS_BYTE        ,
-  output wire [                 7:0] CONTROL_BYTE       ,
-  output reg  [                63:0] BYTE_COUNT         ,
-  input  wire [                63:0] SIZE_AT_DESCRIPTOR ,
-  input  wire [                63:0] ADDR_AT_DESCRIPTOR ,
-  output wire                        UPDATE_LATENCY     ,
-  output wire [                63:0] CURRENT_LATENCY    ,
-  output wire [                63:0] TIME_AT_REQ        ,
-  output wire [                63:0] TIME_AT_COMP       ,
-  output wire [                63:0] BYTES_AT_REQ       ,
-  output wire [                63:0] BYTES_AT_COMP      ,
-  output wire [                63:0] WORD_COUNT         ,
-  output wire [   C_WINDOW_SIZE-1:0] BUSY_TAGS          ,
-  output wire [C_WINDOW_SIZE*11-1:0] SIZE_TAGS          , //Size associate to each tag
-  input  wire [   C_WINDOW_SIZE-1:0] COMPLETED_TAGS     ,
-  input  wire [                63:0] CURRENT_WINDOW_SIZE,
+  input  wire                        ENGINE_VALID             ,
+  input  wire [                 7:0] STATUS_BYTE              ,
+  output wire [                 7:0] CONTROL_BYTE             ,
+  output reg  [                63:0] BYTE_COUNT               ,
+  input  wire [                63:0] SIZE_AT_DESCRIPTOR       ,
+  input  wire [                63:0] ADDR_AT_DESCRIPTOR       ,
+  output wire                        UPDATE_LATENCY           ,
+  output wire [                63:0] CURRENT_LATENCY          ,
+  output wire [                63:0] TIME_AT_REQ              ,
+  output wire [                63:0] TIME_AT_COMP             ,
+  output wire [                63:0] BYTES_AT_REQ             ,
+  output wire [                63:0] BYTES_AT_COMP            ,
+  output wire [                63:0] WORD_COUNT               ,
+  output wire [   C_WINDOW_SIZE-1:0] BUSY_TAGS                ,
+  output wire [C_WINDOW_SIZE*11-1:0] SIZE_TAGS                , //Size associate to each tag
+  input  wire [   C_WINDOW_SIZE-1:0] COMPLETED_TAGS           ,
+  input  wire [                63:0] CURRENT_WINDOW_SIZE      ,
   output wire [                63:0] DEBUG
 );
   localparam c_req_attr = 3'b000; //ID based ordering, Relaxed ordering, No Snoop
   localparam c_req_tc   = 3'b000;
 
   wire [63:0] adapted_size_at_descriptor_s;
-  assign adapted_size_at_descriptor_s = ADDR_AT_DESCRIPTOR[1:0] ? SIZE_AT_DESCRIPTOR+4:SIZE_AT_DESCRIPTOR;
+  assign adapted_size_at_descriptor_s = ADDR_AT_DESCRIPTOR[1:0] ? SIZE_AT_DESCRIPTOR+4:SIZE_AT_DESCRIPTOR; 
 
 
 
@@ -157,6 +155,7 @@ module dma_rq_logic #(
   wire         c2s_buf_full           ;
   reg  [  4:0] c2s_buf_rd_ptr         ;
   reg  [  4:0] c2s_buf_wr_ptr         ;
+
 
 
   assign C2S_FIFO_TREADY   = c2s_fifo_tready_s;
@@ -259,9 +258,9 @@ module dma_rq_logic #(
   wire [1:0] capabilities_s;
   assign capabilities_s = STATUS_BYTE[6:5];
 
-  reg  [C_WINDOW_SIZE-1:0] current_tags_r    ; // Number of asked tags (memory read) that hasnt been received yet.
-  wire                     end_of_operation  ;
-  reg                      end_of_operation_r;
+  reg [C_WINDOW_SIZE-1:0] current_tags_r; // Number of asked tags (memory read) that hasnt been received yet.
+  wire end_of_operation;
+  reg end_of_operation_r;
 
   reg [C_WINDOW_SIZE-1:0] window_size_mask_r;
   reg [              7:0] window_size_r     ;
@@ -353,8 +352,6 @@ module dma_rq_logic #(
   ////////
   // Logic that creates the Memory Write request TLPs (header and  data).
   // DATA and VALID signals are given value in this process
-  reg [31:0] current_iteration_r;
-
   wire last_word_at_tlp_s     ;
   wire last_two_words_at_tlp_s;
   wire one_word_at_buffer_s   ;
@@ -426,7 +423,7 @@ module dma_rq_logic #(
         end
 
         INIT_READ : begin
-          if(M_AXIS_RQ_TREADY && (mem_rd_current_tlp_r<= mem_rd_total_tlp_r || current_iteration_r!=C_NITERATIONS) &&  (current_tags_r & window_size_mask_r)!=window_size_mask_r) begin
+          if(M_AXIS_RQ_TREADY && (mem_rd_current_tlp_r<= mem_rd_total_tlp_r) &&  (current_tags_r & window_size_mask_r)!=window_size_mask_r) begin
             //DW 7-4
             axis_rq_tdata_r <= { 128'h0, //128 bits data
               //DW 3
@@ -610,8 +607,8 @@ module dma_rq_logic #(
           mem_wr_total_tlp_r      <= adapted_size_at_descriptor_s>>(log2_max_words_tlp_s+2);
           mem_wr_last_tlp_words_r <= max_words_tlp_s;
         end
-        // end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
-        //   mem_wr_total_tlp_r <= 32'b0;
+     // end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
+     //   mem_wr_total_tlp_r <= 32'b0;
       end else if(ENGINE_VALID && (end_of_operation_r||end_of_operation)) begin
         mem_wr_total_tlp_r <= 32'b0;
       end else begin
@@ -646,8 +643,8 @@ module dma_rq_logic #(
           mem_rd_total_tlp_r      <= adapted_size_at_descriptor_s>>(log2_max_words_read_request_s+2);
           mem_rd_last_tlp_words_r <= max_words_tlp_s;
         end
-        //end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
-        //  mem_rd_total_tlp_r <= 32'b0;
+      //end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
+      //  mem_rd_total_tlp_r <= 32'b0;
       end else if(ENGINE_VALID && (end_of_operation_r||end_of_operation)) begin
         mem_rd_total_tlp_r <= 32'b0;
       end else begin
@@ -812,34 +809,6 @@ module dma_rq_logic #(
     end
   end
 
-
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      current_iteration_r <= 'h1;
-    end else begin
-      case(wr_state)
-        IDLE : begin
-          current_iteration_r <= 'h1;
-        end
-        INIT_WRITE : begin
-          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s && mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-            current_iteration_r <= current_iteration_r+1;
-          end
-        end
-        WRITE : begin
-          if(M_AXIS_RQ_TREADY && ((one_word_at_buffer_s && last_word_at_tlp_s) ||  (last_two_words_at_tlp_s && two_words_at_buffer_s)) && mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-            current_iteration_r <= current_iteration_r+1;
-          end
-        end
-        WAIT_READ : begin
-          if(end_of_operation) begin
-            current_iteration_r <= current_iteration_r+1;
-          end
-        end
-      endcase
-    end
-  end
-
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
       state <= IDLE;
@@ -847,7 +816,7 @@ module dma_rq_logic #(
       case(state)
         IDLE : begin
           if(M_AXIS_RQ_TREADY) begin //Assure previous packets have been sent
-            if( ENGINE_VALID && !end_of_operation_r  && !end_of_operation && current_iteration_r != C_NITERATIONS && (mem_wr_current_tlp_r <= mem_wr_total_tlp_r || mem_rd_current_tlp_r <= mem_rd_total_tlp_r )) begin
+            if( ENGINE_VALID && !end_of_operation_r  && !end_of_operation  && (mem_wr_current_tlp_r <= mem_wr_total_tlp_r || mem_rd_current_tlp_r <= mem_rd_total_tlp_r )) begin
               state <= WAIT_WR_OP;
             end else begin
               state <= IDLE;
@@ -857,7 +826,7 @@ module dma_rq_logic #(
           end
         end
         WAIT_WR_OP : begin
-          if(end_of_operation && current_iteration_r == C_NITERATIONS) begin
+          if(end_of_operation) begin
             state <= IDLE;
           end else begin
             state <= WAIT_WR_OP;
@@ -890,18 +859,12 @@ module dma_rq_logic #(
               wr_state <= INIT_WRITE;
             end else if(last_word_at_tlp_s) begin // We complete the transfer in one cycle
               if(mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-                if(capabilities_s[1]) begin
-                  wr_state <= INIT_READ;
-                end else begin
-                  if(current_iteration_r != C_NITERATIONS) begin
-                    wr_state = INIT_WRITE;
-                  end else begin
-                    wr_state = IDLE;
-                  end
-                end
+                wr_state <= capabilities_s[1] ? INIT_READ : IDLE;
+              end else begin
+                wr_state = INIT_WRITE;
               end
-            end else begin
-              wr_state = INIT_WRITE;
+            end else begin      //Else we have to send more packets
+              wr_state <= WRITE;
             end
           end else begin
             wr_state <= INIT_WRITE;
@@ -911,15 +874,9 @@ module dma_rq_logic #(
           if(M_AXIS_RQ_TREADY) begin
             if((last_word_at_tlp_s && one_word_at_buffer_s) || (last_two_words_at_tlp_s && two_words_at_buffer_s)) begin
               if(mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-                if(capabilities_s[1]) begin
-                  wr_state <= INIT_READ;
-                end else begin
-                  if(current_iteration_r != C_NITERATIONS) begin
-                    wr_state = INIT_WRITE;
-                  end else begin
-                    wr_state = IDLE;
-                  end
-                end
+                wr_state <= capabilities_s[1] ? INIT_READ : IDLE;
+              end else begin
+                wr_state <= INIT_WRITE;
               end
             end else begin
               wr_state <= WRITE;
@@ -937,7 +894,7 @@ module dma_rq_logic #(
         end
         WAIT_READ : begin
           if(end_of_operation) begin
-            wr_state <= current_iteration_r != C_NITERATIONS ? INIT_READ : IDLE;
+            wr_state <= IDLE;
           end else begin
             wr_state <= WAIT_READ;
           end
@@ -993,6 +950,7 @@ module dma_rq_logic #(
 
   assign BUSY_TAGS    = current_tags_r;
   assign s2c_rq_tag_s = firstFree(current_tags_r);
+
 
   reg update_latency_r;
   reg [63:0]  current_latency_r;
