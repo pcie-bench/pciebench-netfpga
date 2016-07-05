@@ -132,15 +132,24 @@ module dma_logic #(
 	wire [63:0] benchmarking_size_at_descriptor_s;
 	wire [63:0] window_size_s                    ;
 
-	reg  [            63:0] byte_count_r              ;
-	wire [            63:0] byte_count_rc_s           ;
-	wire [            63:0] byte_count_rq_s           ;
-	wire                    update_latency_s          ;
-	wire [            63:0] current_latency_s         ;
-	wire [            63:0] time_req_s                ;
-	wire [            63:0] time_comp_s               ;
-	wire [            63:0] bytes_req_s               ;
-	wire [            63:0] bytes_comp_s              ;
+	reg  [63:0] byte_count_r   ;
+	wire [63:0] byte_count_rc_s;
+	wire [63:0] byte_count_rq_s;
+
+	wire        original_update_latency_s ;
+	wire [63:0] original_current_latency_s;
+	wire [63:0] original_time_req_s       ;
+	wire [63:0] original_time_comp_s      ;
+	wire [63:0] original_bytes_req_s      ;
+	wire [63:0] original_bytes_comp_s     ;
+
+	wire        update_latency_s ;
+	wire [63:0] current_latency_s;
+	wire [63:0] time_req_s       ;
+	wire [63:0] time_comp_s      ;
+	wire [63:0] bytes_req_s      ;
+	wire [63:0] bytes_comp_s     ;
+
 	wire [C_DATA_WIDTH-1:0] s_mem_iface_dout_dma_reg_s;
 	wire                    s_mem_iface_ack_dma_reg_s ;
 
@@ -268,7 +277,13 @@ module dma_logic #(
 		.m_axis_tlast (c2s_fifo_tlast_s )
 	);
 
-	wire [63:0] word_count_r;
+	wire [                63:0] word_count_r             ;
+	wire [C_BUS_DATA_WIDTH-1:0] original_axis_rq_tdata_s ;
+	wire [                59:0] original_axis_rq_tuser_s ;
+	wire                        original_axis_rq_tlast_s ;
+	wire [C_BUS_KEEP_WIDTH-1:0] original_axis_rq_tkeep_s ;
+	wire                        original_axis_rq_tvalid_s;
+	wire [                 3:0] original_axis_rq_tready_s;
 
 	dma_benchmarking #(.C_MODE(1)) dma_benchmarking_i (
 		.CLK                        (CLK                              ),
@@ -280,7 +295,39 @@ module dma_logic #(
 		.ORIGINAL_SIZE_AT_DESCRIPTOR(size_at_descriptor_s             ),
 		.ORIGINAL_ADDR_AT_DESCRIPTOR(addr_at_descriptor_s             ),
 		.FAKED_SIZE_AT_DESCRIPTOR   (benchmarking_size_at_descriptor_s),
-		.FAKED_ADDR_AT_DESCRIPTOR   (benchmarking_addr_at_descriptor_s)
+		.FAKED_ADDR_AT_DESCRIPTOR   (benchmarking_addr_at_descriptor_s),
+		
+		
+		.M_AXIS_RQ_TDATA            (original_axis_rq_tdata_s         ),
+		.M_AXIS_RQ_TUSER            (original_axis_rq_tuser_s         ),
+		.M_AXIS_RQ_TLAST            (original_axis_rq_tlast_s         ),
+		.M_AXIS_RQ_TKEEP            (original_axis_rq_tkeep_s         ),
+		.M_AXIS_RQ_TVALID           (original_axis_rq_tvalid_s        ),
+		.M_AXIS_RQ_TREADY           (original_axis_rq_tready_s        ),
+		.S_AXIS_RC_TVALID           (S_AXIS_RC_TVALID                 ),
+		.S_AXIS_RC_TREADY           (S_AXIS_RC_TREADY                 ),
+		
+		.FAKED_AXIS_RQ_TDATA        (M_AXIS_RQ_TDATA                  ),
+		.FAKED_AXIS_RQ_TUSER        (M_AXIS_RQ_TUSER                  ),
+		.FAKED_AXIS_RQ_TLAST        (M_AXIS_RQ_TLAST                  ),
+		.FAKED_AXIS_RQ_TKEEP        (M_AXIS_RQ_TKEEP                  ),
+		.FAKED_AXIS_RQ_TVALID       (M_AXIS_RQ_TVALID                 ),
+		.FAKED_AXIS_RQ_TREADY       (M_AXIS_RQ_TREADY                 ),
+		
+		
+		.ORIGINAL_UPDATE_LATENCY    (original_update_latency_s        ),
+		.ORIGINAL_CURRENT_LATENCY   (original_current_latency_s       ),
+		.ORIGINAL_TIME_AT_REQ       (original_time_req_s              ),
+		.ORIGINAL_TIME_AT_COMP      (original_time_comp_s             ),
+		.ORIGINAL_BYTES_AT_REQ      (original_bytes_req_s             ),
+		.ORIGINAL_BYTES_AT_COMP     (original_bytes_comp_s            ),
+		
+		.FAKED_UPDATE_LATENCY       (update_latency_s                 ),
+		.FAKED_CURRENT_LATENCY      (current_latency_s                ),
+		.FAKED_TIME_AT_REQ          (time_req_s                       ),
+		.FAKED_TIME_AT_COMP         (time_comp_s                      ),
+		.FAKED_BYTES_AT_REQ         (bytes_req_s                      ),
+		.FAKED_BYTES_AT_COMP        (bytes_comp_s                     )
 	);
 
 	// Manage the RQ interface
@@ -290,8 +337,7 @@ module dma_logic #(
 		.C_AXI_KEEP_WIDTH       (C_AXI_KEEP_WIDTH       ),
 		.C_WINDOW_SIZE          (C_WINDOW_SIZE          ),
 		.C_LOG2_MAX_PAYLOAD     (C_LOG2_MAX_PAYLOAD     ),
-		.C_LOG2_MAX_READ_REQUEST(C_LOG2_MAX_READ_REQUEST),
-		.C_MODE                 (1                      )
+		.C_LOG2_MAX_READ_REQUEST(C_LOG2_MAX_READ_REQUEST)
 	) dma_rq_logic_i (
 		.CLK                (CLK                              ),
 		.RST_N              (dma_reset_n                      ),
@@ -299,12 +345,12 @@ module dma_logic #(
 		////////////
 		//  PCIe Interface: 1 AXI-Stream (requester side)
 		////////////
-		.M_AXIS_RQ_TDATA    (M_AXIS_RQ_TDATA                  ),
-		.M_AXIS_RQ_TUSER    (M_AXIS_RQ_TUSER                  ),
-		.M_AXIS_RQ_TLAST    (M_AXIS_RQ_TLAST                  ),
-		.M_AXIS_RQ_TKEEP    (M_AXIS_RQ_TKEEP                  ),
-		.M_AXIS_RQ_TVALID   (M_AXIS_RQ_TVALID                 ),
-		.M_AXIS_RQ_TREADY   (M_AXIS_RQ_TREADY                 ),
+		.M_AXIS_RQ_TDATA    (original_axis_rq_tdata_s         ),
+		.M_AXIS_RQ_TUSER    (original_axis_rq_tuser_s         ),
+		.M_AXIS_RQ_TLAST    (original_axis_rq_tlast_s         ),
+		.M_AXIS_RQ_TKEEP    (original_axis_rq_tkeep_s         ),
+		.M_AXIS_RQ_TVALID   (original_axis_rq_tvalid_s        ),
+		.M_AXIS_RQ_TREADY   (original_axis_rq_tready_s        ),
 		
 		
 		.S_AXIS_RC_TDATA    (S_AXIS_RC_TDATA                  ),
@@ -332,12 +378,12 @@ module dma_logic #(
 		.SIZE_AT_DESCRIPTOR (benchmarking_size_at_descriptor_s),
 		.ADDR_AT_DESCRIPTOR (benchmarking_addr_at_descriptor_s),
 		.CURRENT_WINDOW_SIZE(window_size_s                    ),
-		.UPDATE_LATENCY     (update_latency_s                 ),
-		.CURRENT_LATENCY    (current_latency_s                ),
-		.TIME_AT_REQ        (time_req_s                       ),
-		.TIME_AT_COMP       (time_comp_s                      ),
-		.BYTES_AT_REQ       (bytes_req_s                      ),
-		.BYTES_AT_COMP      (bytes_comp_s                     ),
+		.UPDATE_LATENCY     (original_update_latency_s        ),
+		.CURRENT_LATENCY    (original_current_latency_s       ),
+		.TIME_AT_REQ        (original_time_req_s              ),
+		.TIME_AT_COMP       (original_time_comp_s             ),
+		.BYTES_AT_REQ       (original_bytes_req_s             ),
+		.BYTES_AT_COMP      (original_bytes_comp_s            ),
 		.WORD_COUNT         (word_count_r                     ),
 		.SIZE_TAGS          (size_tags_s                      ),
 		.COMPLETED_TAGS     (completed_tags_s                 ),
