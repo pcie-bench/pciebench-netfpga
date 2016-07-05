@@ -40,6 +40,7 @@
 #include "../middleware/huge_page.h"
 #include "../include/ioctl_commands.h"
 
+#define PAGE_SIZE            4096
 #define MEMORY_READ_BOUNDARY 4096 // Do not touch. According to PCIe spec (section 2.2.7)
 #define MAX_WINDOW_SIZE      32
 #define MAX_DMA_DESCRIPTORS  1024
@@ -47,12 +48,17 @@
 #define MAX_READ_REQUEST_SIZE 4096
 #define MAX_PAYLOAD           128
 
-
 // Comment the following two lines if huge pages are not required
 #define USE_HUGE_PAGES
 #define NUMBER_PAGES         1
 
 //#define NUMBER_PAGES         MAX_PAGES-1 //If using kenel pages, check that this value do NOT exced the one predefined in HOST/include/ioctl_commands.h
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(*(arr)))
+#endif
+
+static uint64_t large_array[8*1024*1024];
 
 struct offset_pattern {
   uint64_t initial_offset;
@@ -65,6 +71,8 @@ struct fixed_pattern {
 struct random_pattern {
   uint64_t initial_offset;
   uint64_t nsystempages;
+  uint64_t cachelines;
+  uint64_t windowsize;
 };
 struct sequential_pattern {
 };
@@ -223,9 +231,11 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
         i++;
         arg->prop.pran.initial_offset = string2bytes(argv[i]);
         i++;
-        arg->prop.pran.nsystempages =  (string2bytes(argv[i]) + KERNEL_PAGE_SIZE - 1) / KERNEL_PAGE_SIZE;
-        if (arg->prop.pran.nsystempages == 0) {
-          return -1;
+        arg->prop.pran.nsystempages = (string2bytes(argv[i])+PAGE_SIZE-1)/PAGE_SIZE;
+        arg->prop.pran.cachelines = string2bytes(argv[i])/64;
+        arg->prop.pran.windowsize = string2bytes(argv[i]);
+        if(arg->prop.pran.nsystempages == 0) {
+                return -1;
         }
         srand(time(NULL));
       } else if (strcmp(argv[i], "OFF") == 0) {
@@ -257,21 +267,17 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
   return 0;
 }
 
-
-
 /*
  * Before starting a test we aim thrash the cache by randomly
  * writing to elements in a 64MB large array.
  */
-static void thrash_cache(uint64_t *pmem, uint64_t total_size)
-{
+static void thrash_cache(void) {
   uint64_t i, r;
-  for (i = 0; i < 4 * total_size; i++) {
-    r = rand();
-    pmem[r % (total_size / sizeof(uint64_t))] = (uint64_t)i * r;
+  for (i = 0; i < 4*ARRAY_SIZE(large_array); i++) {
+      r = rand();
+      large_array[r % ARRAY_SIZE(large_array)] = (uint64_t)i * r;
   }
 }
-
 
 /* Warm the host buffers for a given window size. The window size is
  * rounded up to the nearest full page. */
@@ -283,7 +289,6 @@ static void warm_cache(uint64_t *pmem, uint64_t total_size)
   }
 }
 
-
 struct dma_descriptor_sw dlist [MAX_DMA_DESCRIPTORS];
 int main(int argc, char **argv)
 {
@@ -292,8 +297,11 @@ int main(int argc, char **argv)
   int i, j;
   char success;
   uint64_t total_size;
-  uint64_t page_num;
-  uint64_t page_num_prev;
+  uint64_t prev_page=-1;
+  uint64_t page=0;
+  uint64_t r;
+  uint64_t address;
+
 
   if (readArguments (argc, argv, &args)) {
     printUsage();
@@ -346,23 +354,24 @@ int main(int argc, char **argv)
                   || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
       break;
     case RAN:
-      dlist[i].address       = (rand() * 1. / RAND_MAX) * KERNEL_PAGE_SIZE * args.prop.pran.nsystempages + args.prop.pran.initial_offset; // Fixed offset + random
-      page_num_prev          = dlist[i - 1].address % KERNEL_PAGE_SIZE;
+        while(1) {
+        	r = rand();
+                address = (r % args.prop.pran.cachelines) * 64;
+                address %= args.prop.pran.windowsize;
 
-      page_num = dlist[i].address % KERNEL_PAGE_SIZE;
+                page = address / PAGE_SIZE;
 
-      if (page_num == page_num_prev) {
-        if (args.prop.pran.nsystempages > 1) {
-          if (page_num == 0) {
-            dlist[i].address += KERNEL_PAGE_SIZE;
-          }  else {
-            dlist[i].address -= KERNEL_PAGE_SIZE;
-          }
+                if(args.prop.pran.nsystempages == 1 || page != prev_page) {
+                        prev_page = page;
+                        break;
+                }
         }
-      }
-      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
-                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
-      break;
+
+        dlist[i].address = address;
+
+        success = !((((args.nbytes-1)%MEMORY_READ_BOUNDARY+dlist[i].address)/MEMORY_READ_BOUNDARY!=(dlist[i].address)/MEMORY_READ_BOUNDARY)
+                  || (args.nbytes%MEMORY_READ_BOUNDARY==0 && dlist[i].address%MEMORY_READ_BOUNDARY!=0));  // End of boundary reached
+        break;
     default:
       fprintf(stderr, "Pattern not implemented\n");
       success = 0;
@@ -398,24 +407,22 @@ int main(int argc, char **argv)
         }
         break;
       case DISCARD:
-        if (dlist[i].address > CACHE_SIZE) {
-          thrash_cache(pmem, CACHE_SIZE);
-        } else {
-          thrash_cache((uint64_t *)((uint8_t *)pmem + (uint64_t)(((dlist[i].address >> 2) << 2) + CACHE_SIZE)), CACHE_SIZE);
-        }
-        break;
+          thrash_cache();
+       	  break;
       }
       fprintf(stderr, "%d,%ld,%ld", i, args.nbytes, dlist[i].address );
       writeDescriptor(&(dlist[i]));
       dlist[i].index = (dlist[i].index + 1) % MAX_DMA_DESCRIPTORS;
       readDescriptor(&(dlist[i]));
 
-      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is going to be warmed up
+      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is we warmed up
         if (args.pat == RAN) {
-          warm_cache((uint64_t *)((uint8_t *)pmem + (uint64_t)((dlist[i].address >> 2) << 2)), args.prop.pran.nsystempages * KERNEL_PAGE_SIZE);
+	  warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
         }
       }
 
+      //fprintf(stderr, "waiting....");
+      //getchar();	
       fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_req * 4, dlist[i].bytes_at_req * 4, dlist[i].time_at_req ? args.nbytes * 8.0 / (dlist[i].time_at_req * 4) : 0);
       fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_comp * 4, dlist[i].bytes_at_comp * 4, dlist[i].time_at_comp ? args.nbytes * 8.0 / (dlist[i].time_at_comp * 4) : 0);
       fprintf(stderr, ",%ld,%ld,%lf\n", dlist[i].latency * 4,   (dlist[i].bytes_at_comp + dlist[i].bytes_at_req) * 4, (args.nbytes) * 8.0 / (dlist[i].latency * 4));
