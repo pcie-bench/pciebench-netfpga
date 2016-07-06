@@ -168,7 +168,7 @@ module dma_benchmarking #(
 // create_ip -name fifo_generator -vendor xilinx.com -library ip -version 13.0 -module_name fifo_benchmark
 // set_property -dict [list CONFIG.INTERFACE_TYPE {AXI_STREAM} CONFIG.TDATA_NUM_BYTES {32} CONFIG.Enable_TLAST {true}  CONFIG.TUSER_WIDTH {60} CONFIG.HAS_TSTRB {false} CONFIG.HAS_TKEEP {true} CONFIG.Input_Depth_axis {4096} CONFIG.Programmable_Empty_Type_axis {Single_Programmable_Empty_Threshold_Input_Port} CONFIG.Reset_Type {Asynchronous_Reset} CONFIG.Full_Flags_Reset_Value {1} CONFIG.TSTRB_WIDTH {32} CONFIG.TKEEP_WIDTH {32} CONFIG.FIFO_Implementation_wach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wach {15} CONFIG.Empty_Threshold_Assert_Value_wach {14} CONFIG.FIFO_Implementation_wrch {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wrch {15} CONFIG.Empty_Threshold_Assert_Value_wrch {14} CONFIG.FIFO_Implementation_rach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_rach {15} CONFIG.Empty_Threshold_Assert_Value_rach {14} CONFIG.Full_Threshold_Assert_Value_axis {4095} CONFIG.Empty_Threshold_Assert_Value_axis {4095}] [get_ips fifo_benchmark]// set_property -dict [list CONFIG.Input_Depth_axis {1024} CONFIG.Full_Threshold_Assert_Value_axis {1023} CONFIG.Programmable_Empty_Type_axis {No_Programmable_Empty_Threshold} CONFIG.Empty_Threshold_Assert_Value_axis {1022}] [get_ips fifo_benchmark]
 	wire          fifo_empty_s          ;
-	wire [11 : 0] axis_prog_empty_thresh;
+	wire [12 : 0] axis_prog_empty_thresh;
 	assign axis_prog_empty_thresh = C_ELEMENTS_BEFORE_INIT;
 	generate if(C_MODE !=0) begin
 			fifo_benchmark your_instance_name (
@@ -246,14 +246,22 @@ module dma_benchmarking #(
 	always @(negedge RST_N or posedge CLK) begin
 		if (!RST_N) begin
 			sop_r <= 'h1;
+		end else begin
+			if(M_AXIS_RQ_TVALID&M_AXIS_RQ_TREADY&M_AXIS_RQ_TLAST) begin
+				sop_r <= 1'b1;
+			end else if(M_AXIS_RQ_TVALID&M_AXIS_RQ_TREADY) begin
+				sop_r <= 1'b0;
+			end
+		end
+	end
+	always @(negedge RST_N or posedge CLK) begin
+		if (!RST_N) begin
 			op_r <= 'h0;
 			op_valid_r <= 'h0;
 		end else begin
-			if(faked_is_end_of_operation_s) begin
-				sop_r <= 1'b1;
+			if(is_end_of_operation_s) begin
 				op_valid_r <= 1'b0;
 			end else if(M_AXIS_RQ_TVALID&M_AXIS_RQ_TREADY&sop_r) begin
-				sop_r <= 1'b0;
 				op_valid_r <= op_valid_s;
 				op_r <= op_valid_s ? op_s : op_r;
 			end
