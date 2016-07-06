@@ -68,8 +68,8 @@ module dma_benchmarking #(
 	parameter C_BUS_DATA_WIDTH       = 256,
 	parameter C_BUS_KEEP_WIDTH = (C_BUS_DATA_WIDTH/32),
 	parameter C_ELEMENTS             = 20 , // Up to 2**20 TLPs in the FIFO
-	parameter C_ELEMENTS_BEFORE_INIT = 4  , // 2**2 elements before any TLP is transferred
-	parameter C_NITERATIONS          = 8  , //8388608, // 8M
+	parameter C_ELEMENTS_BEFORE_INIT = 4096  , // 2**2 elements before any TLP is transferred
+	parameter C_NITERATIONS          = 1024  , //8388608, // 8M
 	parameter C_MODE                 = 1   // Mode 0 -> Do nothing.
 	// Repeat in loop (until reach C_NITERATIONS):
 	// · Mode 1 -> Always to the same position
