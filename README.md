@@ -69,6 +69,23 @@ The design is limited to machines that verify:
   where */opt/Xilinx/Vivado/2014.4* is the installation directory of the Xilinx packages.
 
 
+* Configuration for the measure of the bandwidth in the device to host direction
+
+Given the fact that no acknowledge from the memory controller is received while performing memory write requests, the bandwidth cannot be estimated based on a single transactions. For this purpose, an intermmediate FIFO that holds the TLPs prior to their delivery is inserted into the design.
+
+This is the only case where is necessary to use this intermmediate buffer and the design is needed to be generated concienciously. The easiest way of performing such action is:
+
+  1. Alter the affected sources.
+  2. Regenerate the project (or resynthesize and implement a previous version). 
+
+The labor is simplified thanks to the wizard.sh script. Option t toggles the project to the mode bandwidth measurement, whilst the option d, returns the sources to the more general version.
+
+```
+  cd FPGA
+  sh wizard.sh
+  # Push d or t according to the preferences
+``` 
+
 ## Hierarchy of the project
 
 Two folders can be observed under the root of the git project:

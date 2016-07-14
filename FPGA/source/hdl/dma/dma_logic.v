@@ -285,7 +285,7 @@ module dma_logic #(
 	wire                        original_axis_rq_tvalid_s;
 	wire [                 3:0] original_axis_rq_tready_s;
 
-	dma_benchmarking #(.C_MODE(1)) dma_benchmarking_i (
+	dma_benchmarking #(.C_MODE(0)) dma_benchmarking_i (
 		.CLK                        (CLK                              ),
 		.RST_N                      (dma_reset_n                      ),
 		.ORIGINAL_CONTROL_BYTE      (control_byte_s                   ),

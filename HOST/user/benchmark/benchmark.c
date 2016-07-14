@@ -54,11 +54,18 @@
 
 //#define NUMBER_PAGES         MAX_PAGES-1 //If using kenel pages, check that this value do NOT exced the one predefined in HOST/include/ioctl_commands.h
 
+// #define BW_TEST
+#ifdef BW_TEST
+#define NUMBER_HW_ITERATIONS         1024
+#else
+#define NUMBER_HW_ITERATIONS         1
+#endif
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(*(arr)))
 #endif
 
-static uint64_t large_array[8*1024*1024];
+static uint64_t large_array[8 * 1024 * 1024];
 
 struct offset_pattern {
   uint64_t initial_offset;
@@ -193,6 +200,12 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
     } else if (!strcmp (argv[i], "-l")) {
       i++;
       arg->niters = string2bytes(argv[i]);
+#ifdef BW_TEST
+      if (arg->niters != 1) {
+        printf("The loopback is applied at hardware level for the bandwidth test of the device to host direction\n");
+        return -1;
+      }
+#endif
     } else if (!strcmp (argv[i], "-w")) {
       i++;
       arg->wsize = string2bytes(argv[i]);
@@ -231,11 +244,11 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
         i++;
         arg->prop.pran.initial_offset = string2bytes(argv[i]);
         i++;
-        arg->prop.pran.nsystempages = (string2bytes(argv[i])+PAGE_SIZE-1)/PAGE_SIZE;
-        arg->prop.pran.cachelines = string2bytes(argv[i])/64;
+        arg->prop.pran.nsystempages = (string2bytes(argv[i]) + PAGE_SIZE - 1) / PAGE_SIZE;
+        arg->prop.pran.cachelines = string2bytes(argv[i]) / 64;
         arg->prop.pran.windowsize = string2bytes(argv[i]);
-        if(arg->prop.pran.nsystempages == 0) {
-                return -1;
+        if (arg->prop.pran.nsystempages == 0) {
+          return -1;
         }
         srand(time(NULL));
       } else if (strcmp(argv[i], "OFF") == 0) {
@@ -271,11 +284,12 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
  * Before starting a test we aim thrash the cache by randomly
  * writing to elements in a 64MB large array.
  */
-static void thrash_cache(void) {
+static void thrash_cache(void)
+{
   uint64_t i, r;
-  for (i = 0; i < 4*ARRAY_SIZE(large_array); i++) {
-      r = rand();
-      large_array[r % ARRAY_SIZE(large_array)] = (uint64_t)i * r;
+  for (i = 0; i < 4 * ARRAY_SIZE(large_array); i++) {
+    r = rand();
+    large_array[r % ARRAY_SIZE(large_array)] = (uint64_t)i * r;
   }
 }
 
@@ -297,10 +311,11 @@ int main(int argc, char **argv)
   int i, j;
   char success;
   uint64_t total_size;
-  uint64_t prev_page=-1;
-  uint64_t page=0;
+  uint64_t prev_page = -1;
+  uint64_t page = 0;
   uint64_t r;
   uint64_t address;
+  uint64_t total_bytes;
 
 
   if (readArguments (argc, argv, &args)) {
@@ -354,24 +369,24 @@ int main(int argc, char **argv)
                   || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
       break;
     case RAN:
-        while(1) {
-        	r = rand();
-                address = (r % args.prop.pran.cachelines) * 64;
-                address %= args.prop.pran.windowsize;
+      while (1) {
+        r = rand();
+        address = (r % args.prop.pran.cachelines) * 64;
+        address %= args.prop.pran.windowsize;
 
-                page = address / PAGE_SIZE;
+        page = address / PAGE_SIZE;
 
-                if(args.prop.pran.nsystempages == 1 || page != prev_page) {
-                        prev_page = page;
-                        break;
-                }
+        if (args.prop.pran.nsystempages == 1 || page != prev_page) {
+          prev_page = page;
+          break;
         }
+      }
 
-        dlist[i].address = address;
+      dlist[i].address = address;
 
-        success = !((((args.nbytes-1)%MEMORY_READ_BOUNDARY+dlist[i].address)/MEMORY_READ_BOUNDARY!=(dlist[i].address)/MEMORY_READ_BOUNDARY)
-                  || (args.nbytes%MEMORY_READ_BOUNDARY==0 && dlist[i].address%MEMORY_READ_BOUNDARY!=0));  // End of boundary reached
-        break;
+      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
+                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
+      break;
     default:
       fprintf(stderr, "Pattern not implemented\n");
       success = 0;
@@ -407,9 +422,10 @@ int main(int argc, char **argv)
         }
         break;
       case DISCARD:
-          thrash_cache();
-       	  break;
+        thrash_cache();
+        break;
       }
+      total_bytes = NUMBER_HW_ITERATIONS * args.nbytes;
       fprintf(stderr, "%d,%ld,%ld", i, args.nbytes, dlist[i].address );
       writeDescriptor(&(dlist[i]));
       dlist[i].index = (dlist[i].index + 1) % MAX_DMA_DESCRIPTORS;
@@ -417,15 +433,15 @@ int main(int argc, char **argv)
 
       if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is we warmed up
         if (args.pat == RAN) {
-	  warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
+          warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
         }
       }
 
       //fprintf(stderr, "waiting....");
-      //getchar();	
-      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_req * 4, dlist[i].bytes_at_req * 4, dlist[i].time_at_req ? args.nbytes * 8.0 / (dlist[i].time_at_req * 4) : 0);
-      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_comp * 4, dlist[i].bytes_at_comp * 4, dlist[i].time_at_comp ? args.nbytes * 8.0 / (dlist[i].time_at_comp * 4) : 0);
-      fprintf(stderr, ",%ld,%ld,%lf\n", dlist[i].latency * 4,   (dlist[i].bytes_at_comp + dlist[i].bytes_at_req) * 4, (args.nbytes) * 8.0 / (dlist[i].latency * 4));
+      //getchar();
+      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_req * 4, dlist[i].bytes_at_req * 4, dlist[i].time_at_req ? total_bytes * 8.0 / (dlist[i].time_at_req * 4) : 0);
+      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_comp * 4, dlist[i].bytes_at_comp * 4, dlist[i].time_at_comp ? total_bytes * 8.0 / (dlist[i].time_at_comp * 4) : 0);
+      fprintf(stderr, ",%ld,%ld,%lf\n", dlist[i].latency * 4,   (dlist[i].bytes_at_comp + dlist[i].bytes_at_req) * 4, (total_bytes) * 8.0 / (dlist[i].latency * 4));
     }
   }
   // Free the memory

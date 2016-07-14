@@ -31,6 +31,8 @@ operationMenu() {
 		v) sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_vc709.sh; sh clean.sh;;
 		w) sh scripts/implement_design.sh; sh clean.sh;;
 		p) sh scripts/program_fpga.sh; sh clean.sh;;
+		t) perl scripts/enable_bw_test.pl -s; sh clean.sh;;
+		d) perl scripts/enable_bw_test.pl -u; sh clean.sh;;
 		0) echo "Bye"; sh clean.sh;;
 		*) echo "Oopps!!! Bad option"; sh clean.sh;;
 	esac
@@ -51,6 +53,8 @@ if hash dialog 2>/dev/null; then
 	s "Create a vivado project with its core IPs for NetFPGA SUME" \
 	v "Create a vivado project with its core IPs for VC709" \
 	w "Synthesize, implement and generate bitstream" \
+	t "Modify the sources in order to perform bandwidth measures"		 \
+	d "Modify the sources in order to disable bandwidth measures"		 \
 	p "Program the FPGA with a previously generated bitstream" \
 	0 "Exit" 2>"${INPUT}"
 	 
@@ -60,16 +64,22 @@ if hash dialog 2>/dev/null; then
 	
 	clear
 else
-	echo "***************************************************************"
-	echo "*         DMA Core Project Generation utility                 *"
-	echo "***************************************************************"
-	echo "* [s] Create a vivado project with its core IPs (SUME)        *"
-	echo "* [v] Create a vivado project with its core IPs (VC709)       *"
-	echo "* [w] Synthesize, implement and generate bitstream            *"
-	echo "* [p] Program the FPGA with a previously generated bitstream  *"
-	echo "* [0] Exit/Stop                                               *"
-	echo "***************************************************************"
-	echo -n "Enter your menu choice [svwp0]: "
+	echo "******************************************************************"
+	echo "*         DMA Core Project Generation utility                    *"
+	echo "******************************************************************"
+	echo "* [s] Create a vivado project with its core IPs (SUME)           *"
+	echo "* [v] Create a vivado project with its core IPs (VC709)          *"
+	echo "* [w] Synthesize, implement and generate bitstream               *"
+	echo "* [l] Compile simulation libraries for QuestaSim                 *"
+	echo "* [b] Generate simulation scripts for QuestaSim                  *"
+	echo "* [s] Compile project for simulation                             *"	
+	echo "* [r] Run the simulation                                         *"	
+	echo "* [p] Program the FPGA with a previously generated bitstream     *"
+	echo "* [t] Modify the sources in order to perform bandwidth measures  *"
+	echo "* [d] Modify the sources in order to disable bandwidth measures  *"
+	echo "* [0] Exit/Stop                                                  *"
+	echo "******************************************************************"
+	echo -n "Enter your menu choice: "
 	read menuOption
 	operationMenu $menuOption
 fi

@@ -4,8 +4,6 @@
 @author      Jose Fernando Zazo Rollon (josefernando.zazo@estudiante.uam.es)
 @date        20/04/2015
 
-@brief Top level design containing  the PCIe DMA core
-
 Copyright (c) 2016
 All rights reserved.
 
@@ -65,12 +63,11 @@ Every constante will be preceded by "c_"name_of_the_constant
 (x <= 2048) ? 11 : 12
 
 module dma_benchmarking #(
-	parameter C_BUS_DATA_WIDTH       = 256,
+	parameter C_BUS_DATA_WIDTH       = 256 ,
 	parameter C_BUS_KEEP_WIDTH = (C_BUS_DATA_WIDTH/32),
-	parameter C_ELEMENTS             = 20 , // Up to 2**20 TLPs in the FIFO
-	parameter C_ELEMENTS_BEFORE_INIT = 4096  , // 2**2 elements before any TLP is transferred
-	parameter C_NITERATIONS          = 1024  , //8388608, // 8M
-	parameter C_MODE                 = 1   // Mode 0 -> Do nothing.
+	parameter C_ELEMENTS_BEFORE_INIT = 1000, // Elements before any TLP is transferred
+	parameter C_NITERATIONS          = 1024, // 8M
+	parameter C_MODE                 = 1    // Mode 0 -> Do nothing.
 	// Repeat in loop (until reach C_NITERATIONS):
 	// · Mode 1 -> Always to the same position
 	// · Mode 2 -> Always to successive positions. The user must check that the area is writable!!!
@@ -97,8 +94,8 @@ module dma_benchmarking #(
 	output wire [C_BUS_KEEP_WIDTH-1:0] FAKED_AXIS_RQ_TKEEP        ,
 	output wire                        FAKED_AXIS_RQ_TVALID       ,
 	input  wire [                 3:0] FAKED_AXIS_RQ_TREADY       ,
-	input  wire                        S_AXIS_RC_TVALID    ,
-	input  wire [                21:0] S_AXIS_RC_TREADY    ,
+	input  wire                        S_AXIS_RC_TVALID           ,
+	input  wire [                21:0] S_AXIS_RC_TREADY           ,
 	input  wire                        ORIGINAL_UPDATE_LATENCY    ,
 	input  wire [                63:0] ORIGINAL_CURRENT_LATENCY   ,
 	input  wire [                63:0] ORIGINAL_TIME_AT_REQ       ,
@@ -117,8 +114,8 @@ module dma_benchmarking #(
 	reg [63:0] current_address_r   ;
 	reg [63:0] current_size_r      ;
 	reg [63:0] current_iteration_r ;
-	reg [1:0]       state               ;
-	reg [1:0]       state_p_r               ;
+	reg [ 2:0] state               ;
+	reg [ 2:0] state_p_r           ;
 	reg        faked_engine_valid_r;
 
 	wire [3:0] op_s      ;
@@ -131,11 +128,13 @@ module dma_benchmarking #(
 
 	wire is_end_of_operation_s      ;
 	wire faked_is_end_of_operation_s;
+	reg        faked_update_latency_r ;
+
 	assign is_end_of_operation_s       = ORIGINAL_CONTROL_BYTE[3];
 	assign faked_is_end_of_operation_s = FAKED_CONTROL_BYTE[3];
 	assign FAKED_CONTROL_BYTE          = C_MODE==0 ?
 		ORIGINAL_CONTROL_BYTE :
-		{ 4'h0, is_end_of_operation_s && current_iteration_r==C_NITERATIONS, 3'h0 };
+		{ 4'h0, faked_update_latency_r, 3'h0 };
 	assign FAKED_ENGINE_VALID = C_MODE==0 ?
 		ORIGINAL_ENGINE_VALID
 		: faked_engine_valid_r;
@@ -171,7 +170,7 @@ module dma_benchmarking #(
 	wire [12 : 0] axis_prog_empty_thresh;
 	assign axis_prog_empty_thresh = C_ELEMENTS_BEFORE_INIT;
 	generate if(C_MODE !=0) begin
-			fifo_benchmark your_instance_name (
+			fifo_benchmark fifo_benchmark_i (
 				.s_aclk                (CLK                                            ), // input wire s_aclk
 				.s_aresetn             (RST_N                                          ), // input wire s_aresetn
 				.s_axis_tvalid         (M_AXIS_RQ_TVALID                               ), // input wire s_axis_tvalid
@@ -231,13 +230,13 @@ module dma_benchmarking #(
 			stop_p2_r <= stop_p_r;
 
 			if(stop_r) begin
-				stop_r <= faked_axis_rq_tvalid_s || (op_r==4'h0&&op_valid_r) || !stop_p2_r;
+				stop_r <= faked_axis_rq_tvalid_s || !stop_p2_r;
 			end else begin
-				stop_r <= (faked_is_end_of_operation_s || (op_r==4'h0&&op_valid_r)); // Send
+				stop_r <= faked_is_end_of_operation_s;  // Send
 			end
 
 			if(force_send_r) begin
-				force_send_r  <= faked_axis_rq_tvalid_s || (!faked_axis_rq_tvalid_s && current_iteration_r<C_NITERATIONS) || (op_r==4'h0&&op_valid_r);
+				force_send_r  <= faked_axis_rq_tvalid_s || (!faked_axis_rq_tvalid_s && current_iteration_r<C_NITERATIONS);
 			end else begin
 				force_send_r  <= stop_r ? faked_axis_rq_tvalid_s : !fifo_empty_s;
 			end
@@ -268,30 +267,30 @@ module dma_benchmarking #(
 		end
 	end
 
-	reg [5:0] bubble_r; 
+	reg [5:0] bubble_r;
 	always @(negedge RST_N or posedge CLK) begin
 		if (!RST_N) begin
 			current_size_r       <= 64'b0;
 			current_address_r    <= 64'b0;
 			faked_engine_valid_r <= 1'b0;
-			state                <= 2'b0;
-			state_p_r                <= 2'b0;
+			state                <= 3'b000;
+			state_p_r                <= 3'b000;
 			current_iteration_r  <= 64'b1;
 		end else begin
 			state_p_r <= state;
 			case(state)
-				2'b00 : begin // Waiting for the user
+				3'b000 : begin // Waiting for the user
 					current_size_r       <= ORIGINAL_SIZE_AT_DESCRIPTOR;
 					current_address_r    <= ORIGINAL_ADDR_AT_DESCRIPTOR;
 					faked_engine_valid_r <= 1'b0;
 					current_iteration_r  <= 64'h1;
 
 					if(ORIGINAL_ENGINE_VALID) begin
-						state                <= 2'b01;
+						state                <= 3'b001;
 						faked_engine_valid_r <= 1'b1;
 					end
 				end
-				2'b01 : begin
+				3'b001 : begin
 					if(is_end_of_operation_s) begin
 						if (C_MODE==1) begin
 							current_address_r <= ORIGINAL_ADDR_AT_DESCRIPTOR;
@@ -303,26 +302,29 @@ module dma_benchmarking #(
 						current_iteration_r <= current_iteration_r + 1;
 
 						if(current_iteration_r==C_NITERATIONS) begin
-							state                <= 2'b10;
+							state                <= 3'b010;
 							faked_engine_valid_r <= 1'b0;
 						end
 						bubble_r <= 'd3;
 					end
 				end
-				2'b10 : begin // The last writes to the fifo present a latency. Wait 3 pulses
+				3'b010 : begin // The last writes to the fifo present a latency. Wait 3 pulses
 					bubble_r <= bubble_r - 1;
-					if(bubble_r==0) begin //Have we extracted all the values from the fifo? 
-						state  <= (faked_axis_rq_tvalid_r || (!fifo_empty_s || force_send_r)) ? 2'b11 : 2'b00; 
+					if(bubble_r==0) begin //Have we extracted all the values from the fifo?
+						state  <= (faked_axis_rq_tvalid_r || (!fifo_empty_s || force_send_r)) ? 3'b011 : 3'b100;
 					end
 				end
-				2'b11 : begin
-					state  <= (faked_axis_rq_tvalid_r || (!fifo_empty_s || force_send_r))  ? 2'b11 : 2'b00; 
+				3'b011 : begin
+					state  <= (faked_axis_rq_tvalid_r || (!fifo_empty_s || force_send_r))  ? 3'b011 : 3'b100;
+				end
+				3'b100: begin
+					state <= faked_update_latency_r ? 3'b000: 3'b100;
 				end
 				default : begin
 					current_size_r       <= 64'b0;
 					current_address_r    <= 64'b0;
 					faked_engine_valid_r <= 1'b0;
-					state                <= 2'b00;
+					state                <= 3'b000;
 					current_iteration_r  <= 64'b1;
 				end
 			endcase
@@ -330,7 +332,6 @@ module dma_benchmarking #(
 	end
 
 
-	reg        faked_update_latency_r ;
 	reg [63:0] faked_current_latency_r;
 	reg [63:0] candidate4current_latency_r;
 	reg [63:0] faked_time_at_req_r    ;
@@ -348,11 +349,11 @@ module dma_benchmarking #(
 			if(   updating_latency_r // We are updating or this is the first pulse where tvalid is 1.
 				|| (faked_axis_rq_tvalid_s & faked_axis_rq_tready_r & (!fifo_empty_s | force_send_r))) begin
 				candidate4current_latency_r <= candidate4current_latency_r + 1;
-				updating_latency_r <= (state!=2'b00);
-			end else if(state==2'b00) begin
+				updating_latency_r <= (state!=3'b00);
+			end else if(state==3'b00) begin
 				candidate4current_latency_r <= 64'b0;
 				updating_latency_r <= 1'b0;
-			end	
+			end
 		end
 	end
 	always @(negedge RST_N or posedge CLK) begin
@@ -373,10 +374,10 @@ module dma_benchmarking #(
 			if(ORIGINAL_UPDATE_LATENCY) begin
 				faked_time_at_req_r <= faked_time_at_req_r + FAKED_TIME_AT_REQ;
 				faked_time_at_comp_r <= faked_time_at_comp_r + FAKED_TIME_AT_COMP;
-			end else if(state==2'b00) begin
+			end else if(state==3'b000) begin
 				faked_time_at_req_r <= 64'b0;
 				faked_time_at_comp_r <= 64'b0;
-			end	
+			end
 		end
 	end
 
@@ -385,7 +386,7 @@ module dma_benchmarking #(
 		if(!RST_N) begin
 			faked_update_latency_r <= 1'b0;
 		end else begin
-			if(state_p_r != state && state == 2'b00) begin
+			if(state_p_r != state && state == 3'b100) begin
 				faked_update_latency_r <= 1'b1;
 			end else begin
 				faked_update_latency_r <= 1'b0;
