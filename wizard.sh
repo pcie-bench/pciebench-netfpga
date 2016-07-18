@@ -27,14 +27,14 @@
 
 operationMenu() {
 	case $1 in
-		s) sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_sume.sh; sh clean.sh;;
-		v) sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_vc709.sh; sh clean.sh;;
-		w) sh scripts/implement_design.sh; sh clean.sh;;
-		p) sh scripts/program_fpga.sh; sh clean.sh;;
-		t) perl scripts/enable_bw_test.pl -s; sh clean.sh;;
-		d) perl scripts/enable_bw_test.pl -u; sh clean.sh;;
-		0) echo "Bye"; sh clean.sh;;
-		*) echo "Oopps!!! Bad option"; sh clean.sh;;
+		s) cd FPGA; sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_sume.sh; sh clean.sh; cd ..;;
+		v) cd FPGA; sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_vc709.sh; sh clean.sh; cd ..;;
+		w) cd FPGA; sh scripts/implement_design.sh; sh clean.sh; cd ..;;
+		p) cd FPGA; sh scripts/program_fpga.sh; sh clean.sh; cd ..;;
+		t) cd FPGA; perl scripts/enable_bw_test.pl -s; sh clean.sh; cd ..;;
+		d) cd FPGA; perl scripts/enable_bw_test.pl -u; sh clean.sh; cd ..;;
+		0) echo "Bye"; cd FPGA; sh clean.sh; cd ..;;
+		*) echo "Oopps!!! Bad option"; cd FPGA; sh clean.sh; cd ..;;
 	esac
 }
 

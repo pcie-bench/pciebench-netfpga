@@ -81,7 +81,6 @@ This is the only case where is necessary to use this intermmediate buffer and th
 The labor is simplified thanks to the wizard.sh script. Option t toggles the project to the mode bandwidth measurement, whilst the option d, returns the sources to the more general version.
 
 ```
-  cd FPGA
   sh wizard.sh
   # Push d or t according to the preferences
 ``` 
@@ -91,7 +90,6 @@ The labor is simplified thanks to the wizard.sh script. Option t toggles the pro
 Two folders can be observed under the root of the git project:
 
 * FPGA: All the related resources to the hardware design are available at this point.
-  *  **FPGA/wizard.sh**: Assistant that lets the user generate the reference project automatically.
   *  FPGA/scripts: Scripts used by the wizard.sh script. They should not be of interest.
   *  FPGA/source: Constraints and sources for the project. Feel free to explore.
 
@@ -99,13 +97,13 @@ Two folders can be observed under the root of the git project:
   * Additional documentation (doxygen-style) for the source files at software level is located under HOST/doc.
   * **HOST/Makefile**: The main makefile of the software sources. It will invoke inner makefiles.
 
+* wizard.sh: Note that an assistant that lets the user to generate the reference project automatically is provided at the root directory.
 
 ## Building the hardware project
 
 If your environment has been previously configured, you just need to clone the repo, "cd" to that path and follow the next steps:
 
 ```
-cd FPGA
 sh wizard.sh #Select your option (v for VC709, s for SUME). HUMAN ACTION is required for pushing the letter
 #...
 #Take a coffee

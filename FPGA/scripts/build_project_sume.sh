@@ -24,7 +24,7 @@
 #
 if [ -d "./project" ]; then
 	while true; do
-		echo -n "Output dir (./project) exists. Do you really want to overwrite this directory [y/n]? "
+		echo -n "Output dir (./FPGA/project) exists. Do you really want to overwrite this directory [y/n]? "
 		read yn
 
 	    case $yn in
