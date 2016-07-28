@@ -82,15 +82,6 @@ module pcie_benchmark (
   wire         s_axis_cc_tvalid;
   wire         s_axis_cc_tready;
 
-  wire [ 1:0] cfg_interrupt_msix_enable   ;
-  wire [ 1:0] cfg_interrupt_msix_mask     ;
-  wire [ 5:0] cfg_interrupt_msix_vf_enable;
-  wire [ 5:0] cfg_interrupt_msix_vf_mask  ;
-  wire [31:0] cfg_interrupt_msix_data     ;
-  wire [63:0] cfg_interrupt_msix_address  ;
-  wire        cfg_interrupt_msix_int      ;
-  wire        cfg_interrupt_msix_sent     ;
-  wire        cfg_interrupt_msix_fail     ;
 
   wire [1:0] pcie_tfc_nph_av;
   wire [1:0] pcie_tfc_npd_av;
@@ -185,16 +176,6 @@ module pcie_benchmark (
     .s_axis_cc_tvalid            (s_axis_cc_tvalid            ), // input
     .s_axis_cc_tready            (s_axis_cc_tready            ), // output [3:0]
     
-    
-    .cfg_interrupt_msix_enable   (cfg_interrupt_msix_enable   ), // output [1:0]
-    .cfg_interrupt_msix_mask     (cfg_interrupt_msix_mask     ), // output [1:0]
-    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable), // output [5:0]
-    .cfg_interrupt_msix_vf_mask  (cfg_interrupt_msix_vf_mask  ), // output [5:0]
-    .cfg_interrupt_msix_data     (cfg_interrupt_msix_data     ), // input  [31:0]
-    .cfg_interrupt_msix_address  (cfg_interrupt_msix_address  ), // input  [63:0]
-    .cfg_interrupt_msix_int      (cfg_interrupt_msix_int      ), // input
-    .cfg_interrupt_msix_sent     (cfg_interrupt_msix_sent     ), // output
-    .cfg_interrupt_msix_fail     (cfg_interrupt_msix_fail     ), // output
     .pcie_tfc_nph_av             (pcie_tfc_nph_av             ), // output [1:0]
     .pcie_tfc_npd_av             (pcie_tfc_npd_av             )  // output [1:0]
   );
@@ -250,16 +231,7 @@ module pcie_benchmark (
     .s_axis_cc_tkeep             (s_axis_cc_tkeep             ),
     .s_axis_cc_tvalid            (s_axis_cc_tvalid            ),
     .s_axis_cc_tready            (s_axis_cc_tready            ),
-    // MSI-X
-    .cfg_interrupt_msix_enable   (cfg_interrupt_msix_enable   ),
-    .cfg_interrupt_msix_mask     (cfg_interrupt_msix_mask     ),
-    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable),
-    .cfg_interrupt_msix_vf_mask  (cfg_interrupt_msix_vf_mask  ),
-    .cfg_interrupt_msix_data     (cfg_interrupt_msix_data     ),
-    .cfg_interrupt_msix_address  (cfg_interrupt_msix_address  ),
-    .cfg_interrupt_msix_int      (cfg_interrupt_msix_int      ),
-    .cfg_interrupt_msix_sent     (cfg_interrupt_msix_sent     ),
-    .cfg_interrupt_msix_fail     (cfg_interrupt_msix_fail     ),
+  
     // Credits
     .pcie_tfc_nph_av             (pcie_tfc_nph_av             ),
     .pcie_tfc_npd_av             (pcie_tfc_npd_av             ),

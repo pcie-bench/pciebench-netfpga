@@ -53,16 +53,6 @@ module pcie_controller (
   output wire [  7:0] s_axis_cc_tkeep             ,
   output wire         s_axis_cc_tvalid            ,
   input  wire         s_axis_cc_tready            ,
-  // MSI-x Interrupts
-  input  wire [  1:0] cfg_interrupt_msix_enable   ,
-  input  wire [  1:0] cfg_interrupt_msix_mask     ,
-  input  wire [  5:0] cfg_interrupt_msix_vf_enable,
-  input  wire [  5:0] cfg_interrupt_msix_vf_mask  ,
-  output wire [ 31:0] cfg_interrupt_msix_data     ,
-  output wire [ 63:0] cfg_interrupt_msix_address  ,
-  output wire         cfg_interrupt_msix_int      ,
-  input  wire         cfg_interrupt_msix_sent     ,
-  input  wire         cfg_interrupt_msix_fail     ,
   // Credits
   input  wire [  1:0] pcie_tfc_nph_av             ,
   input  wire [  1:0] pcie_tfc_npd_av             ,
@@ -296,17 +286,7 @@ module pcie_controller (
     .S_MEM_IFACE_DOUT               (dout),
     .S_MEM_IFACE_DIN                (din),
     .S_MEM_IFACE_WE                 (we),
-    .S_MEM_IFACE_ACK                (ack),
-
-    .cfg_interrupt_msix_enable      (cfg_interrupt_msix_enable),         // input  wire [1:0]                           
-    .cfg_interrupt_msix_mask        (cfg_interrupt_msix_mask),           // input  wire [1:0]                           
-    .cfg_interrupt_msix_vf_enable   (cfg_interrupt_msix_vf_enable),      // input  wire [5:0]                           
-    .cfg_interrupt_msix_vf_mask     (cfg_interrupt_msix_vf_mask),        // input  wire [5:0]                           
-    .cfg_interrupt_msix_data        (cfg_interrupt_msix_data),           // output reg  [31:0]                          
-    .cfg_interrupt_msix_address     (cfg_interrupt_msix_address),        // output wire [63:0]                          
-    .cfg_interrupt_msix_int         (cfg_interrupt_msix_int),            // output reg                                           
-    .cfg_interrupt_msix_sent        (cfg_interrupt_msix_sent),           // input  wire                                         
-    .cfg_interrupt_msix_fail        (cfg_interrupt_msix_fail)            // input  wire                                         
+    .S_MEM_IFACE_ACK                (ack)  
   );
 
 

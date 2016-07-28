@@ -66,15 +66,6 @@ module pcie_ep_wrapper (
   input  wire [  7:0] s_axis_cc_tkeep             ,
   input  wire         s_axis_cc_tvalid            ,
   output wire         s_axis_cc_tready            ,
-  output wire [  1:0] cfg_interrupt_msix_enable   ,
-  output wire [  1:0] cfg_interrupt_msix_mask     ,
-  output wire [  5:0] cfg_interrupt_msix_vf_enable,
-  output wire [  5:0] cfg_interrupt_msix_vf_mask  ,
-  input  wire [ 31:0] cfg_interrupt_msix_data     ,
-  input  wire [ 63:0] cfg_interrupt_msix_address  ,
-  input  wire         cfg_interrupt_msix_int      ,
-  output wire         cfg_interrupt_msix_sent     ,
-  output wire         cfg_interrupt_msix_fail     ,
   output wire [  1:0] pcie_tfc_nph_av             ,
   output wire [  1:0] pcie_tfc_npd_av
 );
@@ -201,22 +192,7 @@ module pcie_ep_wrapper (
   wire [ 3:0] cfg_interrupt_int                ; // input
   wire [ 1:0] cfg_interrupt_pending            ; // input
   wire        cfg_interrupt_sent               ; // output
-  wire [ 1:0] cfg_interrupt_msi_enable         ; // output
-  wire [ 5:0] cfg_interrupt_msi_vf_enable      ; // output
-  wire [ 5:0] cfg_interrupt_msi_mmenable       ; // output
-  wire        cfg_interrupt_msi_mask_update    ; // output
-  wire [31:0] cfg_interrupt_msi_data           ; // output
-  wire [ 3:0] cfg_interrupt_msi_select         ; // input
-  wire [31:0] cfg_interrupt_msi_int            ; // input
-  wire [63:0] cfg_interrupt_msi_pending_status ; // input
-  wire        cfg_interrupt_msi_sent           ; // output
-  wire        cfg_interrupt_msi_fail           ; // output
-  wire [ 2:0] cfg_interrupt_msi_attr           ; // input
-  wire        cfg_interrupt_msi_tph_present    ; // input
-  wire [ 1:0] cfg_interrupt_msi_tph_type       ; // input
-  wire [ 8:0] cfg_interrupt_msi_tph_st_tag     ; // input
-  wire [ 2:0] cfg_interrupt_msi_function_number; // input
-
+  
 
   IBUF sys_reset_n_ibuf (.O(sys_rst_n_c), .I(pcie_rst_n));
 
@@ -410,31 +386,7 @@ module pcie_ep_wrapper (
     .cfg_interrupt_int                (cfg_interrupt_int                 ), // input   [3:0]
     .cfg_interrupt_pending            (cfg_interrupt_pending             ), // input   [1:0]
     .cfg_interrupt_sent               (cfg_interrupt_sent                ), // output
-    .cfg_interrupt_msi_enable         (cfg_interrupt_msi_enable          ), // output  [1:0]
-    .cfg_interrupt_msi_vf_enable      (cfg_interrupt_msi_vf_enable       ), // output  [5:0]
-    .cfg_interrupt_msi_mmenable       (cfg_interrupt_msi_mmenable        ), // output  [5:0]
-    .cfg_interrupt_msi_mask_update    (cfg_interrupt_msi_mask_update     ), // output
-    .cfg_interrupt_msi_data           (cfg_interrupt_msi_data            ), // output  [31:0]
-    .cfg_interrupt_msi_select         (cfg_interrupt_msi_select          ), // input   [3:0]
-    .cfg_interrupt_msi_int            (cfg_interrupt_msi_int             ), // input   [31:0]
-    .cfg_interrupt_msi_pending_status (cfg_interrupt_msi_pending_status  ), // input   [63:0]
-    .cfg_interrupt_msi_sent           (cfg_interrupt_msi_sent            ), // output
-    .cfg_interrupt_msi_fail           (cfg_interrupt_msi_fail            ), // output
-    .cfg_interrupt_msi_attr           (cfg_interrupt_msi_attr            ), // input   [2:0]
-    .cfg_interrupt_msi_tph_present    (cfg_interrupt_msi_tph_present     ), // input
-    .cfg_interrupt_msi_tph_type       (cfg_interrupt_msi_tph_type        ), // input   [1:0]
-    .cfg_interrupt_msi_tph_st_tag     (cfg_interrupt_msi_tph_st_tag      ), // input   [8:0]
-    .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number ), // input   [2:0]
-    .cfg_interrupt_msix_enable        (cfg_interrupt_msix_enable         ), // output  [1:0]
-    .cfg_interrupt_msix_mask          (cfg_interrupt_msix_mask           ), // output  [1:0]
-    .cfg_interrupt_msix_vf_enable     (cfg_interrupt_msix_vf_enable      ), // output  [5:0]
-    .cfg_interrupt_msix_vf_mask       (cfg_interrupt_msix_vf_mask        ), // output  [5:0]
-    .cfg_interrupt_msix_data          (cfg_interrupt_msix_data           ), // input   [31:0]
-    .cfg_interrupt_msix_address       (cfg_interrupt_msix_address        ), // input   [63:0]
-    .cfg_interrupt_msix_int           (cfg_interrupt_msix_int            ), // input
-    .cfg_interrupt_msix_sent          (cfg_interrupt_msix_sent           ), // output
-    .cfg_interrupt_msix_fail          (cfg_interrupt_msix_fail           ), // output
-    
+   
     //----------------------------------------------------------------------------//
     //  System(SYS) Interface                                                     //
     //----------------------------------------------------------------------------//
@@ -582,24 +534,7 @@ module pcie_ep_wrapper (
   // Do not request per function status
 
   assign cfg_interrupt_int                 = 4'b0; // [3:0]
-  assign cfg_interrupt_msi_int             = 32'b0; // [31:0]
   assign cfg_interrupt_pending             = 2'h0;
-  assign cfg_interrupt_msi_select          = 4'h0;
-  assign cfg_interrupt_msi_pending_status  = 64'h0;
-  assign cfg_interrupt_msi_attr            = 3'h0;
-  assign cfg_interrupt_msi_tph_present     = 1'b0;
-  assign cfg_interrupt_msi_tph_type        = 2'h0;
-  assign cfg_interrupt_msi_tph_st_tag      = 9'h0;
-  assign cfg_interrupt_msi_function_number = 3'h0;
-
-
-
 
 
 endmodule
-
-
-
-
-
-
