@@ -27,7 +27,7 @@
 create_clock -period 10.000 -name sys_clk_p -waveform {0.000 5.000} [get_ports pcie_refclk_p]
 
 
-set_property PACKAGE_PIN AV35 [get_ports pcie_rst_n]
+set_property PACKAGE_PIN AY35 [get_ports pcie_rst_n]
 set_property IOSTANDARD LVCMOS18 [get_ports pcie_rst_n]
 set_property PULLUP true [get_ports pcie_rst_n]
 
@@ -44,8 +44,8 @@ set_property PULLUP true [get_ports pcie_rst_n]
 #
 set_property LOC IBUFDS_GTE2_X1Y11 [get_cells pcie_ep_wrapper_i/refclk_ibuf]
 
-set_property PACKAGE_PIN AR22 [get_ports {led[0]}]
-set_property PACKAGE_PIN AR23 [get_ports {led[1]}]
+set_property PACKAGE_PIN G13 [get_ports {led[0]}]
+set_property PACKAGE_PIN AL22 [get_ports {led[1]}]
 set_property IOSTANDARD LVCMOS15 [get_ports {led[0]}]
 set_property IOSTANDARD LVCMOS15 [get_ports {led[1]}]
 
