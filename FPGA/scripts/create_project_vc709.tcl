@@ -111,7 +111,8 @@ wait_on_run user_fifo_synth_1
 launch_run -jobs 4 fifo_benchmark_synth_1
 wait_on_run fifo_benchmark_synth_1
 
-set_property strategy Performance_Explore [get_runs impl_1]
+#set_property strategy Performance_Explore [get_runs impl_1]
+set_property strategy Area_Explore [get_runs impl_1]
 reset_run impl_1
 
 
