@@ -406,12 +406,12 @@ module dma_benchmarking #(
 		end
 	end
 
-	assign FAKED_UPDATE_LATENCY  = faked_update_latency_r;
-	assign FAKED_CURRENT_LATENCY = faked_current_latency_r;
-	assign FAKED_TIME_AT_REQ     = faked_time_at_req_r;
-	assign FAKED_TIME_AT_COMP    = faked_time_at_comp_r;
-	assign FAKED_BYTES_AT_REQ    = faked_bytes_at_req_r;
-	assign FAKED_BYTES_AT_COMP   = faked_bytes_at_comp_r;
+	assign FAKED_UPDATE_LATENCY  = C_MODE==0 ? ORIGINAL_UPDATE_LATENCY  : faked_update_latency_r;
+	assign FAKED_CURRENT_LATENCY = C_MODE==0 ? ORIGINAL_CURRENT_LATENCY : faked_current_latency_r;
+	assign FAKED_TIME_AT_REQ     = C_MODE==0 ? ORIGINAL_TIME_AT_REQ     : faked_time_at_req_r;
+	assign FAKED_TIME_AT_COMP    = C_MODE==0 ? ORIGINAL_TIME_AT_COMP    : faked_time_at_comp_r;
+	assign FAKED_BYTES_AT_REQ    = C_MODE==0 ? ORIGINAL_BYTES_AT_REQ    : faked_bytes_at_req_r;
+	assign FAKED_BYTES_AT_COMP   = C_MODE==0 ? ORIGINAL_BYTES_AT_COMP   : faked_bytes_at_comp_r;
 
 endmodule
 
