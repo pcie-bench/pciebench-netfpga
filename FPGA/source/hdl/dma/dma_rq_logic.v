@@ -7,27 +7,27 @@
 @brief Design containing  the DMA requester interface
 
 
- Copyright (c) 2016
- All rights reserved.
+Copyright (c) 2016
+All rights reserved.
 
 
- @NETFPGA_LICENSE_HEADER_START@
+@NETFPGA_LICENSE_HEADER_START@
 
- Licensed to NetFPGA C.I.C. (NetFPGA) under one or more contributor
- license agreements.  See the NOTICE file distributed with this work for
- additional information regarding copyright ownership.  NetFPGA licenses this
- file to you under the NetFPGA Hardware-Software License, Version 1.0 (the
- "License"); you may not use this file except in compliance with the
- License.  You may obtain a copy of the License at:
+Licensed to NetFPGA C.I.C. (NetFPGA) under one or more contributor
+license agreements.  See the NOTICE file distributed with this work for
+additional information regarding copyright ownership.  NetFPGA licenses this
+file to you under the NetFPGA Hardware-Software License, Version 1.0 (the
+"License"); you may not use this file except in compliance with the
+License.  You may obtain a copy of the License at:
 
-   http://www.netfpga-cic.org
+http://www.netfpga-cic.org
 
- Unless required by applicable law or agreed to in writing, Work distributed
- under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- CONDITIONS OF ANY KIND, either express or implied.  See the License for the
- specific language governing permissions and limitations under the License.
+Unless required by applicable law or agreed to in writing, Work distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations under the License.
 
- @NETFPGA_LICENSE_HEADER_END@
+@NETFPGA_LICENSE_HEADER_END@
 
 
 */
@@ -79,58 +79,61 @@ module dma_rq_logic #(
   parameter C_LOG2_MAX_PAYLOAD      = 8  , // 2**C_LOG2_MAX_PAYLOAD in bytes
   parameter C_LOG2_MAX_READ_REQUEST = 14   // 2**C_LOG2_MAX_READ_REQUEST in bytes
 ) (
-  input  wire                        CLK                      ,
-  input  wire                        RST_N                    ,
+  input  wire                        CLK                ,
+  input  wire                        RST_N              ,
   ////////////
   //  PCIe Interface: 1 AXI-Stream (requester side)
   ////////////
-  output wire [C_BUS_DATA_WIDTH-1:0] M_AXIS_RQ_TDATA          ,
-  output wire [                59:0] M_AXIS_RQ_TUSER          ,
-  output wire                        M_AXIS_RQ_TLAST          ,
-  output wire [C_BUS_KEEP_WIDTH-1:0] M_AXIS_RQ_TKEEP          ,
-  output wire                        M_AXIS_RQ_TVALID         ,
-  input  wire [                 3:0] M_AXIS_RQ_TREADY         ,
-  input  wire [C_BUS_DATA_WIDTH-1:0] S_AXIS_RC_TDATA          ,
-  input  wire [                74:0] S_AXIS_RC_TUSER          ,
-  input  wire                        S_AXIS_RC_TLAST          ,
-  input  wire [C_BUS_KEEP_WIDTH-1:0] S_AXIS_RC_TKEEP          ,
-  input  wire                        S_AXIS_RC_TVALID         ,
-  input  wire [                21:0] S_AXIS_RC_TREADY         ,
+  output wire [C_BUS_DATA_WIDTH-1:0] M_AXIS_RQ_TDATA    ,
+  output wire [                59:0] M_AXIS_RQ_TUSER    ,
+  output wire                        M_AXIS_RQ_TLAST    ,
+  output wire [C_BUS_KEEP_WIDTH-1:0] M_AXIS_RQ_TKEEP    ,
+  output wire                        M_AXIS_RQ_TVALID   ,
+  input  wire [                 3:0] M_AXIS_RQ_TREADY   ,
+  input  wire [C_BUS_DATA_WIDTH-1:0] S_AXIS_RC_TDATA    ,
+  input  wire [                74:0] S_AXIS_RC_TUSER    ,
+  input  wire                        S_AXIS_RC_TLAST    ,
+  input  wire [C_BUS_KEEP_WIDTH-1:0] S_AXIS_RC_TKEEP    ,
+  input  wire                        S_AXIS_RC_TVALID   ,
+  input  wire [                21:0] S_AXIS_RC_TREADY   ,
   ////////////
   //  c2s fifo interface: 1 AXI-Stream (data to be transferred in memory write requests)
   ////////////
-  output wire                        C2S_FIFO_TREADY          ,
-  input  wire [C_BUS_DATA_WIDTH-1:0] C2S_FIFO_TDATA           ,
-  input  wire                        C2S_FIFO_TLAST           ,
-  input  wire                        C2S_FIFO_TVALID          ,
-  input  wire [C_AXI_KEEP_WIDTH-1:0] C2S_FIFO_TKEEP           ,
+  output wire                        C2S_FIFO_TREADY    ,
+  input  wire [C_BUS_DATA_WIDTH-1:0] C2S_FIFO_TDATA     ,
+  input  wire                        C2S_FIFO_TLAST     ,
+  input  wire                        C2S_FIFO_TVALID    ,
+  input  wire [C_AXI_KEEP_WIDTH-1:0] C2S_FIFO_TKEEP     ,
   ////////////
   //  Descriptor interface: Interface with the necessary data to complete a memory read/write request.
   ////////////
-  input  wire                        ENGINE_VALID             ,
-  input  wire [                 7:0] STATUS_BYTE              ,
-  output wire [                 7:0] CONTROL_BYTE             ,
-  output reg  [                63:0] BYTE_COUNT               ,
-  input  wire [                63:0] SIZE_AT_DESCRIPTOR       ,
-  input  wire [                63:0] ADDR_AT_DESCRIPTOR       ,
-  output wire                        UPDATE_LATENCY           ,
-  output wire [                63:0] CURRENT_LATENCY          ,
-  output wire [                63:0] TIME_AT_REQ              ,
-  output wire [                63:0] TIME_AT_COMP             ,
-  output wire [                63:0] BYTES_AT_REQ             ,
-  output wire [                63:0] BYTES_AT_COMP            ,
-  output wire [                63:0] WORD_COUNT               ,
-  output wire [   C_WINDOW_SIZE-1:0] BUSY_TAGS                ,
-  output wire [C_WINDOW_SIZE*11-1:0] SIZE_TAGS                , //Size associate to each tag
-  input  wire [   C_WINDOW_SIZE-1:0] COMPLETED_TAGS           ,
-  input  wire [                63:0] CURRENT_WINDOW_SIZE      ,
+  input  wire                        ENGINE_VALID       ,
+  input  wire [                 8:0] STATUS_BYTE        ,
+  output wire [                 7:0] CONTROL_BYTE       ,
+  output reg  [                63:0] BYTE_COUNT         ,
+  input  wire [                63:0] SIZE_AT_DESCRIPTOR ,
+  input  wire [                63:0] SIZE_AT_HOST       ,
+  input  wire [                63:0] NUMBER_TLPS        ,
+  input  wire [                63:0] ADDR_AT_DESCRIPTOR ,
+  input  wire [                63:0] ADDRESS_GEN_OFFSET ,
+  input  wire [                63:0] ADDRESS_GEN_INCR   ,
+  output wire                        UPDATE_LATENCY     ,
+  output wire [                63:0] CURRENT_LATENCY    ,
+  output wire [                63:0] TIME_AT_REQ        ,
+  output wire [                63:0] TIME_AT_COMP       ,
+  output wire [                63:0] BYTES_AT_REQ       ,
+  output wire [                63:0] BYTES_AT_COMP      ,
+  output wire [                63:0] WORD_COUNT         ,
+  output wire [   C_WINDOW_SIZE-1:0] BUSY_TAGS          ,
+  output wire [C_WINDOW_SIZE*11-1:0] SIZE_TAGS          , //Size associate to each tag
+  input  wire [   C_WINDOW_SIZE-1:0] COMPLETED_TAGS     ,
+  input  wire                        END_OF_TAG         ,
+  input  wire [                 7:0] LAST_TAG           ,  
+  input  wire [                63:0] CURRENT_WINDOW_SIZE,
   output wire [                63:0] DEBUG
 );
   localparam c_req_attr = 3'b000; //ID based ordering, Relaxed ordering, No Snoop
   localparam c_req_tc   = 3'b000;
-
-  wire [63:0] adapted_size_at_descriptor_s;
-  assign adapted_size_at_descriptor_s = ADDR_AT_DESCRIPTOR[1:0] ? SIZE_AT_DESCRIPTOR+4:SIZE_AT_DESCRIPTOR; 
 
 
 
@@ -201,13 +204,63 @@ module dma_rq_logic #(
   //  End of C2S fifo management.
   ////////////
 
+
+
+  // States of the FSMs.
+  localparam IDLE       = 16'h0;
+  localparam INIT_WRITE = 16'h1;
+  localparam WRITE      = 16'h2;
+  localparam INIT_READ  = 16'h3;
+  localparam WAIT_READ  = 16'h4;
+  localparam WAIT_RD_OP = 16'h5;
+  localparam WAIT_WR_OP = 16'h6;
+
+
+  wire [31:0] current_rd_tlp_words_s;
+  wire [31:0] current_wr_tlp_words_s;
+
+
+
+  reg [15:0] wr_state                    ;
+  reg [31:0] mem_wr_current_tlp_r        ; //Current TLP.
+  reg [31:0] mem_rd_current_tlp_r        ; //Current TLP.
+  reg [31:0] mem_wr_current_tlp_modulus_r; //Current TLP modulus TLPs that are involved in the current operation.
+  reg [31:0] mem_rd_current_tlp_modulus_r; //Current TLP modulus TLPs that are involved in the current operation.
+  reg [63:0] mem_wr_remaining_words_r    ; // Total number of 4-bytes words in the current TLP
+  reg [63:0] mem_rd_remaining_words_r    ; // Total number of 4-bytes words in the current TLP
+  reg [ 3:0] mem_wr_next_remainder_r     ;
+  reg [63:0] mem_wr_last_tlp_words_r     ; // Words in the last TLP, the rest will have the maximum size
+
+  reg [63:0] mem_rd_last_tlp_words_r            ; // Words in the last TLP, the rest will have the maximum size
+  reg [63:0] mem_wr_addr_pointed_by_descriptor_r; // Region communicated by the user in the descriptor
+  reg [63:0] mem_rd_addr_pointed_by_descriptor_r; // Region communicated by the user in the descriptor
+  reg [15:0] wr_state_pipe_r                    ; // Previous value of the state wr_state
+
+
+
+
   reg [C_BUS_DATA_WIDTH-1:0] axis_rq_tdata_r ;
+  wire [C_BUS_DATA_WIDTH-1:0] axis_rq_tdata_after_comp_s;
   reg                        axis_rq_tlast_r ;
   reg [C_BUS_KEEP_WIDTH-1:0] axis_rq_tkeep_r ;
   reg                        axis_rq_tvalid_r;
   reg [                 3:0] first_be_r      ;
   reg [                 3:0] last_be_r       ;
 
+
+
+  reg   [C_WINDOW_SIZE-1:0] current_tags_r   ; // Number of asked tags (memory read) that hasnt been received yet.
+  wire  [C_WINDOW_SIZE-1:0] current_tags_s   ;
+  wire                     end_of_operation  ;
+  reg                      end_of_operation_r;
+
+  reg [C_WINDOW_SIZE-1:0] window_size_mask_r;
+  reg [              7:0] window_size_r     ;
+
+  wire last_word_at_tlp_s     ;
+  wire last_two_words_at_tlp_s;
+  wire one_word_at_buffer_s   ;
+  wire two_words_at_buffer_s  ;
 
 
   wire [63:0] log2_max_words_tlp_s;
@@ -221,49 +274,390 @@ module dma_rq_logic #(
   assign max_words_read_request_s      = { {64-C_LOG2_MAX_READ_REQUEST-1{1'b0}},1'b1, {C_LOG2_MAX_READ_REQUEST-2{1'b0}} }; // (1<<(C_LOG2_MAX_READ_REQUEST-2)); //32 (2**5) bit words
 
 
-  reg [15:0] state                              ;
-  reg [15:0] wr_state                           ;
-  reg [31:0] mem_wr_current_tlp_r               ; //Current TLP.
-  reg [31:0] mem_rd_current_tlp_r               ; //Current TLP.
-  reg [63:0] mem_wr_total_words_r               ; //Total number of 4-bytes words to transfer
-  reg [63:0] mem_rd_total_words_r               ; //Total number of 4-bytes words to transfer
-  reg [63:0] mem_wr_remaining_words_r           ; // Total number of 4-bytes words in the current TLP
-  reg [63:0] mem_rd_remaining_words_r           ; // Total number of 4-bytes words in the current TLP
-  reg [ 3:0] mem_wr_next_remainder_r            ;
-  reg [31:0] mem_wr_total_tlp_r                 ; // Total number of TLPs to communicate
-  reg [31:0] mem_rd_total_tlp_r                 ; // Total number of TLPs to communicate
-  reg [63:0] mem_wr_last_tlp_words_r            ; // Words in the last TLP, the rest will have the maximum size
-  reg [63:0] mem_wr_middle_tlp_words_r          ; // Words in the middle TLPs, maximum size or just one tlp
-  reg [63:0] mem_rd_middle_tlp_words_r          ; // Words in the middle TLPs, maximum size or just one tlp
-  reg [63:0] mem_rd_last_tlp_words_r            ; // Words in the last TLP, the rest will have the maximum size
-  reg [63:0] mem_wr_addr_pointed_by_descriptor_r; // Region communicated by the user in the descriptor
-  reg [63:0] mem_rd_addr_pointed_by_descriptor_r; // Region communicated by the user in the descriptor
-  reg [15:0] wr_state_pipe_r                    ; // Previous value of the state wr_state
 
-  assign DEBUG = { state,mem_wr_total_tlp_r[15:0], wr_state, mem_wr_current_tlp_r[15:0] };
+  ////////////////////////////////
+  // Start address generation
 
-  // States of the FSMs.
-  localparam IDLE       = 16'h0;
-  localparam INIT_WRITE = 16'h1;
-  localparam WRITE      = 16'h2;
-  localparam INIT_READ  = 16'h3;
-  localparam WAIT_READ  = 16'h4;
-  localparam WAIT_RD_OP = 16'h5;
-  localparam WAIT_WR_OP = 16'h6;
-
-
-
-
-  //"Capabilities_s" indicates if the engine will generate memory write requests o memory read requests
+  wire [63:0] tx_wr_addr_s    ;
+  wire [63:0] tx_rd_addr_s    ;
+  reg  [63:0] tx_seq_wr_addr_r;
+  reg  [63:0] tx_seq_rd_addr_r;
+  reg  [63:0] next_tx_seq_wr_addr_r;
+  reg  [63:0] next_tx_seq_rd_addr_r;
+  reg  [63:0] tx_fix_wr_addr_r;
+  reg  [63:0] tx_fix_rd_addr_r;
+  reg  [63:0] tx_off_wr_addr_r;
+  reg  [63:0] tx_off_rd_addr_r;
+  reg  [63:0] tx_rand_wr_addr_r;
+  reg  [63:0] tx_rand_rd_addr_r;
+  reg         tx_addr_state_r ;
   wire [1:0] capabilities_s;
+  wire [1:0] address_mode_s;
+
+  ////////////////////////////////
+  // Start address generation: fix
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      tx_fix_wr_addr_r <= 64'b0;
+      tx_fix_rd_addr_r <= 64'b0;
+    end else begin
+      tx_fix_wr_addr_r <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_OFFSET;
+      tx_fix_rd_addr_r <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_OFFSET;
+    end
+  end
+
+
+  ////////////////////////////////
+  // Start address generation: seq and rand
+
+
+  reg [30:0] random_number_r;
+  reg [63:0] random_number_modulus_r;
+  reg [63:0] next_random_address_candidate_r;
+  reg [63:0] next_random_address_candidate_plus_1_r;
+  reg [63:0] next_random_address_wr_r;
+  reg [63:0] next_random_address_rd_r;
+
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      random_number_r <= 1;
+      random_number_modulus_r <= 0;
+      next_random_address_candidate_r <= 0;
+      next_random_address_candidate_plus_1_r <= 0;
+      next_random_address_wr_r <= 0;
+      next_random_address_rd_r <= 0;
+    end else begin
+      random_number_r <= { random_number_r[29:0], random_number_r[30] ^ random_number_r[27] };
+      next_random_address_candidate_r <= random_number_modulus_r;
+      next_random_address_candidate_plus_1_r <= next_random_address_candidate_r+4096;
+
+      next_random_address_wr_r  <=  next_random_address_candidate_r[63:12]!=tx_rand_wr_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
+      next_random_address_rd_r  <=  next_random_address_candidate_r[63:12]!=tx_rand_rd_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
+
+      random_number_modulus_r <= random_number_r&(SIZE_AT_HOST-1);
+    //  random_number_modulus_r <= ((SIZE_AT_HOST  *  random_number_r)>>31); // We generates number in the range 2**0 to 2**31. [2**0, 2**31]
+    //                                                                       // We transform this value to the range [0,1] dividing by 2**31 -> ">>31"
+    //                                                                       // We multiply by the buffer size at the host side
+    end
+  end  
+
+  reg [63:0] initial_wr_seq_page_r;
+  reg [63:0] initial_rd_seq_page_r;
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      tx_seq_wr_addr_r <= 64'b0;
+      tx_rand_wr_addr_r <= 64'h0;
+      tx_off_wr_addr_r <= 64'h0;
+      initial_wr_seq_page_r <= 64'h0;
+      next_tx_seq_wr_addr_r <= 64'h0;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          if (M_AXIS_RQ_TREADY) begin
+            initial_wr_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
+            tx_seq_wr_addr_r      <= ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR;
+            next_tx_seq_wr_addr_r <= ADDR_AT_DESCRIPTOR + (SIZE_AT_DESCRIPTOR<<1);
+            tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_wr_r;
+            tx_off_wr_addr_r  <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_INCR;
+          end
+        end
+        INIT_WRITE : begin
+          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s) begin
+            tx_seq_wr_addr_r      <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_wr_addr_r;
+            next_tx_seq_wr_addr_r <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR;
+
+            tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_wr_r; // Write to the initial bytes of a system page
+            tx_off_wr_addr_r  <= tx_off_wr_addr_r + ADDRESS_GEN_INCR;
+          end
+        end
+        WRITE : begin
+          if(M_AXIS_RQ_TREADY) begin
+            if((two_words_at_buffer_s && last_two_words_at_tlp_s) || (one_word_at_buffer_s && last_word_at_tlp_s)) begin
+              tx_seq_wr_addr_r      <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_wr_addr_r;
+              next_tx_seq_wr_addr_r <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR;
+              tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR  + next_random_address_wr_r;
+              tx_off_wr_addr_r <= tx_off_wr_addr_r + ADDRESS_GEN_INCR;
+            end
+          end
+        end
+        default : begin
+          tx_seq_wr_addr_r <= tx_seq_wr_addr_r;
+          tx_rand_wr_addr_r <= tx_rand_wr_addr_r;
+          tx_off_wr_addr_r <= tx_off_wr_addr_r;
+        end
+      endcase
+    end
+  end
+
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      tx_seq_rd_addr_r <= 64'b0;
+      tx_rand_rd_addr_r <= 64'h0;
+      tx_off_rd_addr_r <= 64'h0;
+      initial_rd_seq_page_r <= 64'h0;
+      next_tx_seq_rd_addr_r <= 64'h0;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          if (M_AXIS_RQ_TREADY) begin
+
+            initial_rd_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
+            next_tx_seq_rd_addr_r <= ADDR_AT_DESCRIPTOR + (SIZE_AT_DESCRIPTOR<<1);            
+            tx_seq_rd_addr_r  <= ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR;
+            tx_rand_rd_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_rd_r;
+            tx_off_rd_addr_r  <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_INCR;
+          end
+        end
+        INIT_READ : begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+            tx_seq_rd_addr_r      <= (next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_rd_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_rd_addr_r;
+            next_tx_seq_rd_addr_r <= (next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_rd_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR;            
+          
+            tx_rand_rd_addr_r <= ADDR_AT_DESCRIPTOR  + next_random_address_rd_r;
+            tx_off_rd_addr_r  <= tx_off_rd_addr_r + ADDRESS_GEN_INCR;
+          end
+        end
+        default : begin
+          tx_seq_rd_addr_r  <= tx_seq_rd_addr_r;
+          tx_rand_rd_addr_r <= tx_rand_rd_addr_r;
+          tx_off_rd_addr_r <= tx_off_rd_addr_r;
+        end
+      endcase
+    end
+  end
+
+
+
+  ////////////////////////////////
+  // Mux the current address according to the specs of the user
+ 
+  assign tx_wr_addr_s = address_mode_s == 2'b00 ? tx_fix_wr_addr_r 
+                      : address_mode_s == 2'b01 ? tx_seq_wr_addr_r 
+                     /* : address_mode_s == 2'b10 ? tx_off_wr_addr_r */
+                      :  tx_rand_wr_addr_r;
+  assign tx_rd_addr_s = address_mode_s == 2'b00 ? tx_fix_rd_addr_r 
+                      : address_mode_s == 2'b01 ? tx_seq_rd_addr_r 
+                      /*: address_mode_s == 2'b10 ? tx_off_rd_addr_r */
+                      :  tx_rand_rd_addr_r;
+
+  ////////////////////////////////
+  // Compute the new boundaries
+
+  reg [31:0] mem_wr_total_tlp_r      ;
+  reg [31:0] mem_rd_total_tlp_r      ;
+  reg [31:0] mem_wr_odd_tlp_words_r  ;
+  reg [31:0] mem_rd_odd_tlp_words_r  ;
+  reg [31:0] mem_wr_number_even_tlp_r;
+  reg [31:0] mem_rd_number_even_tlp_r;
+
+  always @(negedge RST_N or posedge CLK) begin
+    if (!RST_N) begin
+      mem_wr_total_tlp_r       <= 32'b0;
+      mem_rd_total_tlp_r       <= 32'b0;
+      mem_wr_odd_tlp_words_r   <= 64'h0;
+      mem_rd_odd_tlp_words_r   <= 64'h0;
+      mem_wr_number_even_tlp_r <= 32'h0;
+      mem_rd_number_even_tlp_r <= 32'h0;
+    end else begin
+        mem_wr_total_tlp_r <= NUMBER_TLPS;
+        mem_rd_total_tlp_r <= NUMBER_TLPS; 
+
+
+      if( SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD-1:0]) begin
+        mem_wr_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD+:32]+1;
+      end else begin
+        mem_wr_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD+:32];
+      end
+
+      if(SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
+        mem_wr_odd_tlp_words_r <= ((SIZE_AT_DESCRIPTOR&{C_LOG2_MAX_PAYLOAD{1'b1}}) >> 2) ;
+      end else begin
+        mem_wr_odd_tlp_words_r <= max_words_tlp_s;
+      end
+
+
+      if(capabilities_s[0]) begin
+        if( SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD-1:0]) begin
+          mem_rd_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD+:32]+1;
+        end else begin
+          mem_rd_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD+:32];
+        end
+        if(SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
+          mem_rd_odd_tlp_words_r <= ((SIZE_AT_DESCRIPTOR&{C_LOG2_MAX_PAYLOAD{1'b1}}) >> 2) ;
+        end else begin
+          mem_rd_odd_tlp_words_r <= max_words_tlp_s;
+        end
+      end else begin
+        if( SIZE_AT_DESCRIPTOR[C_LOG2_MAX_READ_REQUEST-1:0]) begin
+          mem_rd_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_READ_REQUEST+:32]+1;
+        end else begin
+          mem_rd_number_even_tlp_r <= SIZE_AT_DESCRIPTOR[C_LOG2_MAX_READ_REQUEST+:32];
+        end
+        if(SIZE_AT_DESCRIPTOR[C_LOG2_MAX_READ_REQUEST-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
+          mem_rd_odd_tlp_words_r <= ((SIZE_AT_DESCRIPTOR&{C_LOG2_MAX_READ_REQUEST{1'b1}}) >> 2) ;
+        end else begin
+          mem_rd_odd_tlp_words_r <= max_words_read_request_s;
+        end
+      end
+    end
+  end
+
+
+  assign current_wr_tlp_words_s = mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r  ? mem_wr_odd_tlp_words_r  : max_words_tlp_s;
+  assign current_rd_tlp_words_s = mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r  ? mem_rd_odd_tlp_words_r  : capabilities_s[0] ? max_words_tlp_s : max_words_read_request_s;
+
+
+
+
+
+  /////////
+  // Update the current TLP and memory offset
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      mem_wr_current_tlp_r         <= 32'h1;
+      mem_wr_current_tlp_modulus_r <= 32'h1;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          if (M_AXIS_RQ_TREADY) begin
+            mem_wr_current_tlp_r         <= 32'h1;
+            mem_wr_current_tlp_modulus_r <= 32'h1;
+          end
+        end
+        INIT_WRITE : begin
+          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s) begin
+            mem_wr_current_tlp_r         <= mem_wr_current_tlp_r+1;
+            mem_wr_current_tlp_modulus_r <= mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r ? 32'h1 : mem_wr_current_tlp_modulus_r+1;
+          end
+        end
+        WRITE : begin
+          if(M_AXIS_RQ_TREADY) begin
+            if((two_words_at_buffer_s && last_two_words_at_tlp_s) || (one_word_at_buffer_s && last_word_at_tlp_s)) begin
+              mem_wr_current_tlp_r         <= mem_wr_current_tlp_r+1;
+              mem_wr_current_tlp_modulus_r <= mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r ? 32'h1 : mem_wr_current_tlp_modulus_r+1;
+            end
+          end
+        end
+        default : begin
+          mem_wr_current_tlp_r         <= mem_wr_current_tlp_r;
+          mem_wr_current_tlp_modulus_r <= mem_wr_current_tlp_modulus_r;
+        end
+      endcase
+    end
+  end
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      mem_rd_current_tlp_r <= 32'h1;
+      mem_rd_current_tlp_modulus_r <= 32'h1;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          if (M_AXIS_RQ_TREADY) begin
+            mem_rd_current_tlp_r         <= 32'h1;
+            mem_rd_current_tlp_modulus_r <= 32'h1;
+          end
+        end
+        INIT_READ : begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+            mem_rd_current_tlp_r         <= mem_rd_current_tlp_r+1;
+            mem_rd_current_tlp_modulus_r <= mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r ? 32'h1 : mem_rd_current_tlp_modulus_r+1;
+          end
+        end
+        default : begin
+          mem_rd_current_tlp_r         <= mem_rd_current_tlp_r;
+          mem_rd_current_tlp_modulus_r <= mem_rd_current_tlp_modulus_r;
+        end
+      endcase
+    end
+  end
+
+  assign DEBUG = 0;
+
+
+
+
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      wr_state <= IDLE;
+    end else begin
+      case(wr_state)
+        IDLE : begin // TODO: Check both possibilities (read/write)
+          if(M_AXIS_RQ_TREADY && capabilities_s[0] && ENGINE_VALID && !end_of_operation_r  && !end_of_operation) begin  // C2S engine
+            wr_state <= INIT_WRITE;
+          end else if(M_AXIS_RQ_TREADY && capabilities_s[1] && ENGINE_VALID && !end_of_operation_r && !end_of_operation) begin
+            wr_state <= INIT_READ;
+          end
+        end
+        INIT_WRITE : begin     // Write to the Completer the TLP header.
+          if(M_AXIS_RQ_TREADY) begin
+            if( !one_word_at_buffer_s ) begin // There is no data.
+              wr_state <= INIT_WRITE;
+            end else if(last_word_at_tlp_s) begin // We complete the transfer in one cycle
+              if(mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
+                if(capabilities_s[1]) begin
+                  wr_state <= INIT_READ;
+                end else begin
+                  wr_state <= mem_wr_total_tlp_r <= mem_wr_current_tlp_r ? IDLE : INIT_WRITE;
+                end
+              end else begin
+                wr_state <= INIT_WRITE;
+              end
+            end else begin      //Else we have to send more packets
+              wr_state <= WRITE;
+            end
+          end else begin
+            wr_state <= INIT_WRITE;
+          end
+        end
+        WRITE : begin          // Write to the Completer the rest of the information.
+          if(M_AXIS_RQ_TREADY) begin
+            if((last_word_at_tlp_s && one_word_at_buffer_s) || (last_two_words_at_tlp_s && two_words_at_buffer_s)) begin
+              if(mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
+                if(capabilities_s[1]) begin
+                  wr_state <= INIT_READ;
+                end else begin
+                  wr_state <= mem_wr_total_tlp_r <= mem_wr_current_tlp_r ? IDLE : INIT_WRITE;
+                end
+              end else begin
+                wr_state <= INIT_WRITE;
+              end
+            end else begin
+              wr_state <= WRITE;
+            end
+          end else begin
+            wr_state <= WRITE;
+          end
+        end
+        INIT_READ : begin
+          if(M_AXIS_RQ_TREADY && (current_tags_s & window_size_mask_r)!=window_size_mask_r && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+            if(mem_rd_total_tlp_r <= mem_rd_current_tlp_r) begin
+              wr_state <= WAIT_READ;
+            end else begin
+              if(capabilities_s[0] && mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r ) begin
+                wr_state <= INIT_WRITE;
+              end
+            end
+          end else begin
+            wr_state <= INIT_READ;
+          end
+        end
+        WAIT_READ : begin
+          if(end_of_operation) begin
+            wr_state <= IDLE;
+          end else begin
+            wr_state <= WAIT_READ;
+          end
+        end
+        default : begin
+          wr_state <= IDLE;
+        end
+      endcase
+    end
+  end
+  //"Capabilities_s" indicates if the engine will generate memory write requests o memory read requests
   assign capabilities_s = STATUS_BYTE[6:5];
+  assign address_mode_s = STATUS_BYTE[8:7];
 
-  reg [C_WINDOW_SIZE-1:0] current_tags_r; // Number of asked tags (memory read) that hasnt been received yet.
-  wire end_of_operation;
-  reg end_of_operation_r;
-
-  reg [C_WINDOW_SIZE-1:0] window_size_mask_r;
-  reg [              7:0] window_size_r     ;
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
@@ -279,7 +673,7 @@ module dma_rq_logic #(
     if(!RST_N) begin
       end_of_operation_r <= 0;
     end else begin
-      end_of_operation_r <= end_of_operation;
+      end_of_operation_r <= ENGINE_VALID ? end_of_operation|end_of_operation_r : end_of_operation;
     end
   end
   assign end_of_operation = (wr_state==WAIT_READ && ((current_tags_r & window_size_mask_r)=={C_WINDOW_SIZE{1'b0}}))
@@ -305,13 +699,17 @@ module dma_rq_logic #(
 
   reg [31:0] byte_en_r    ;
   reg        is_sop_r     ;
-  reg [ 1:0] addr_offset_r;
 
-  assign M_AXIS_RQ_TDATA  = axis_rq_tdata_r;
-  assign M_AXIS_RQ_TUSER  = {50'h0,addr_offset_r, last_be_r, first_be_r};
-  assign M_AXIS_RQ_TLAST  = axis_rq_tlast_r;
+
+
+  assign M_AXIS_RQ_TDATA   = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? axis_rq_tdata_after_comp_s : axis_rq_tdata_r;
+  assign M_AXIS_RQ_TVALID  = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? 1'b1 : axis_rq_tvalid_r;
+  assign M_AXIS_RQ_TUSER  = {52'h0, last_be_r, first_be_r};
+  assign M_AXIS_RQ_TLAST  = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r  && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? 1'b1 : axis_rq_tlast_r;
   assign M_AXIS_RQ_TKEEP  = axis_rq_tkeep_r;
-  assign M_AXIS_RQ_TVALID = axis_rq_tvalid_r;
+
+  assign axis_rq_tdata_after_comp_s = { axis_rq_tdata_r[255:128], axis_rq_tdata_r[127:104], LAST_TAG, axis_rq_tdata_r[95:64], axis_rq_tdata_r[63:0]};
+
 
   reg [7:0] req_tag_r; // Current tag for a memory read request (for memory writes let the
   // EP to choose it automatically).
@@ -352,15 +750,115 @@ module dma_rq_logic #(
   ////////
   // Logic that creates the Memory Write request TLPs (header and  data).
   // DATA and VALID signals are given value in this process
-  wire last_word_at_tlp_s     ;
-  wire last_two_words_at_tlp_s;
-  wire one_word_at_buffer_s   ;
-  wire two_words_at_buffer_s  ;
 
   assign last_word_at_tlp_s      = mem_wr_remaining_words_r <= 4;
   assign last_two_words_at_tlp_s = mem_wr_remaining_words_r <= 8;
   assign one_word_at_buffer_s    = c2s_buf_occupancy!=0;
   assign two_words_at_buffer_s   = c2s_buf_occupancy[4:1]!=0;
+
+
+
+
+
+  ////////
+  // · Infer the number of words in the current TLP
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      mem_wr_remaining_words_r            <= 64'h0;
+      mem_wr_next_remainder_r             <= 64'h0;
+      mem_wr_addr_pointed_by_descriptor_r <= 64'h0;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          mem_wr_remaining_words_r            <= SIZE_AT_DESCRIPTOR[63:2] <= max_words_tlp_s ? SIZE_AT_DESCRIPTOR[63:2]  : max_words_tlp_s;
+          mem_wr_next_remainder_r             <= SIZE_AT_DESCRIPTOR[63:2] <= max_words_tlp_s ? SIZE_AT_DESCRIPTOR[63:2]  : max_words_tlp_s;
+          mem_wr_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR;
+        end
+        INIT_WRITE : begin
+          if( M_AXIS_RQ_TREADY && one_word_at_buffer_s ) begin
+            if(last_word_at_tlp_s) begin
+
+              if(mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
+                mem_wr_addr_pointed_by_descriptor_r <= tx_wr_addr_s;
+              end else begin
+                mem_wr_addr_pointed_by_descriptor_r <= mem_wr_addr_pointed_by_descriptor_r + (current_wr_tlp_words_s[10:0]<<2);
+              end
+
+              if((mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r+1) || mem_wr_number_even_tlp_r==1 ) begin
+                mem_wr_remaining_words_r <= mem_wr_odd_tlp_words_r;
+                mem_wr_next_remainder_r  <= mem_wr_odd_tlp_words_r;
+              end else begin
+                mem_wr_remaining_words_r <= max_words_tlp_s;
+                mem_wr_next_remainder_r  <= max_words_tlp_s;
+              end
+            end else begin
+              mem_wr_remaining_words_r <= mem_wr_remaining_words_r - 4;
+              mem_wr_next_remainder_r  <= mem_wr_next_remainder_r - 4;
+            end
+          end
+        end
+        WRITE : begin
+          if(M_AXIS_RQ_TREADY) begin
+            if((one_word_at_buffer_s && last_word_at_tlp_s) || (two_words_at_buffer_s && last_two_words_at_tlp_s)) begin
+              if(mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
+                mem_wr_addr_pointed_by_descriptor_r <= tx_wr_addr_s;
+              end else begin
+                mem_wr_addr_pointed_by_descriptor_r <= mem_wr_addr_pointed_by_descriptor_r + (current_wr_tlp_words_s[10:0]<<2);
+              end
+
+              if((mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r+1) || mem_wr_number_even_tlp_r==1 ) begin
+                mem_wr_remaining_words_r <= mem_wr_odd_tlp_words_r;
+                mem_wr_next_remainder_r  <= mem_wr_odd_tlp_words_r;
+              end else begin
+                mem_wr_remaining_words_r <= max_words_tlp_s;
+                mem_wr_next_remainder_r  <= max_words_tlp_s;
+              end
+            end else if( two_words_at_buffer_s ) begin
+              mem_wr_remaining_words_r <= mem_wr_remaining_words_r - 8;
+              mem_wr_next_remainder_r  <= mem_wr_next_remainder_r - 8;
+            end
+          end
+        end
+      endcase
+    end
+  end
+
+
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      mem_rd_addr_pointed_by_descriptor_r <= 64'b0;
+      mem_rd_remaining_words_r <= 64'b0;
+    end else begin
+      case(wr_state)
+        IDLE : begin
+          if (M_AXIS_RQ_TREADY) begin
+            mem_rd_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR;
+            mem_rd_remaining_words_r            <= SIZE_AT_DESCRIPTOR[63:2] <= max_words_read_request_s ? SIZE_AT_DESCRIPTOR[63:2] : capabilities_s[0] ? max_words_tlp_s : max_words_read_request_s;
+          end
+        end
+        INIT_READ : begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+            if((mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r+1) || mem_rd_number_even_tlp_r==1 ) begin
+              mem_rd_remaining_words_r <= mem_rd_odd_tlp_words_r;
+            end else begin
+              mem_rd_remaining_words_r <= capabilities_s[0] ? max_words_tlp_s : max_words_read_request_s;
+            end
+
+            if(mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r) begin
+              mem_rd_addr_pointed_by_descriptor_r <= tx_rd_addr_s;
+            end else begin
+              mem_rd_addr_pointed_by_descriptor_r <= mem_wr_addr_pointed_by_descriptor_r + (current_rd_tlp_words_s[10:0]<<2);
+            end
+          end
+        end
+
+        default : begin
+          mem_rd_addr_pointed_by_descriptor_r <= mem_rd_addr_pointed_by_descriptor_r;
+        end
+      endcase
+    end
+  end
+
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
@@ -387,7 +885,7 @@ module dma_rq_logic #(
               // (optional fields, the endpoints IDs will be used if no id is specified)
               1'b0,      // poisoned request 1'b0,          // 15 Rsvd    79
               4'b0001,   // memory WRITE request      75-78
-              mem_wr_remaining_words_r[10:0],  // 10-0 DWord Count 0 - IO Write completions -64-74
+              current_wr_tlp_words_s[10:0],  // 10-0 DWord Count 0 - IO Write completions -64-74
               //DW 1-0
               mem_wr_addr_pointed_by_descriptor_r[63:2], 2'b00};  //62 bit word address address + 2 bit Address type (0, untranslated)
 
@@ -423,7 +921,7 @@ module dma_rq_logic #(
         end
 
         INIT_READ : begin
-          if(M_AXIS_RQ_TREADY && (mem_rd_current_tlp_r<= mem_rd_total_tlp_r) &&  (current_tags_r & window_size_mask_r)!=window_size_mask_r) begin
+          if(M_AXIS_RQ_TREADY) begin
             //DW 7-4
             axis_rq_tdata_r <= { 128'h0, //128 bits data
               //DW 3
@@ -438,11 +936,11 @@ module dma_rq_logic #(
               16'h0000, //req_rid,       -- 31-16 Requester ID - 16 bits
               1'b0,      // poisoned request 1'b0,          -- 15 Rsvd
               4'b0000,   // memory READ request
-              mem_rd_remaining_words_r[10:0],  // 10-0 DWord Count 0 - IO Write completions
+              current_rd_tlp_words_s[10:0],  // 10-0 DWord Count 0 - IO Write completions
               //DW 1-0
               mem_rd_addr_pointed_by_descriptor_r[63:2],2'b00 }; //62 bit word address address + 2 bit Address type (0, untranslated)
 
-            axis_rq_tvalid_r <= 1'b1;
+            axis_rq_tvalid_r <= (current_tags_r & window_size_mask_r)!=window_size_mask_r;
           end else if(!M_AXIS_RQ_TREADY) begin
             axis_rq_tvalid_r <= axis_rq_tvalid_r;
             axis_rq_tdata_r  <= axis_rq_tdata_r;
@@ -450,6 +948,7 @@ module dma_rq_logic #(
             axis_rq_tvalid_r <= 1'b0;
           end
         end
+
         default : begin
           if(M_AXIS_RQ_TREADY) begin
             axis_rq_tvalid_r <= 1'b0;
@@ -478,15 +977,6 @@ module dma_rq_logic #(
   // Logic that manages KEEP and LAST signals. Large and tedious but simple in logic.
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
-      addr_offset_r <= 2'h0;
-    end else begin
-      addr_offset_r <= capabilities_s[0] ? mem_wr_addr_pointed_by_descriptor_r[1:0] : mem_rd_addr_pointed_by_descriptor_r[1:0];
-    end
-  end
-
-
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
       axis_rq_tkeep_r <= {C_BUS_KEEP_WIDTH{1'b0}};
       axis_rq_tlast_r <= 1'b0;
       first_be_r      <= 4'h0;
@@ -496,23 +986,12 @@ module dma_rq_logic #(
 
       if(M_AXIS_RQ_TREADY && wr_state == INIT_WRITE) begin // A TLP of type memory write has to be requested.
         is_sop_r <= 1'b1;
-        case(addr_offset_r) // Unaligned offset
-          2'b01   : begin  first_be_r   <= 4'b1110; end
-          2'b10   : begin  first_be_r   <= 4'b1100; end
-          2'b11   : begin  first_be_r   <= 4'b1000; end
-          default : first_be_r   <= 4'b1111;
-        endcase
+        first_be_r   <= 4'b1111;
+
         if(mem_wr_remaining_words_r <= 1) begin
           last_be_r <= 4'h0; // First word and last are the same, so last_be = 0
-        end else if(mem_wr_current_tlp_r!=mem_wr_total_tlp_r) begin
-          last_be_r <= 4'b1111;
         end else begin
-          case(addr_offset_r) // Unaligned offset
-            2'b01   : begin last_be_r  <= 4'b0001; end
-            2'b10   : begin last_be_r  <= 4'b0011; end
-            2'b11   : begin last_be_r  <= 4'b0111; end
-            default : last_be_r   <= 4'b1111;
-          endcase
+          last_be_r   <= 4'b1111; // We just support 32b multiple transmissions
         end
         if( M_AXIS_RQ_TREADY && one_word_at_buffer_s ) begin
           if(last_word_at_tlp_s) begin
@@ -555,32 +1034,9 @@ module dma_rq_logic #(
         end else if(mem_rd_current_tlp_r!=mem_rd_total_tlp_r) begin
           last_be_r <= 4'b1111;
         end else begin
-          first_be_r <= 4'b1111;
-          case(addr_offset_r) // Unaligned offset
-            2'b01   : begin last_be_r  <= 4'b0001; end
-            2'b10   : begin last_be_r  <= 4'b0011; end
-            2'b11   : begin last_be_r  <= 4'b0111; end
-            default : last_be_r   <= 4'b1111;
-          endcase
+          last_be_r   <= 4'b1111;
         end
-
-        if(mem_rd_current_tlp_r==1) begin
-          case(addr_offset_r)
-            2'b01   : begin  first_be_r   <= 4'b1110; end
-            2'b10   : begin  first_be_r   <= 4'b1100; end
-            2'b11   : begin  first_be_r   <= 4'b1000; end
-            default : first_be_r   <= 4'b1111;
-          endcase
-        end else if(mem_rd_current_tlp_r==mem_rd_total_tlp_r && mem_rd_remaining_words_r[10:1] == 0) begin
-          case(addr_offset_r)
-            2'b01   : begin  first_be_r   <= 4'b0001; end
-            2'b10   : begin  first_be_r   <= 4'b0011; end
-            2'b11   : begin  first_be_r   <= 4'b0111; end
-            default : first_be_r   <= 4'b1111;
-          endcase
-        end else begin
-          first_be_r <= 4'b1111;
-        end
+        first_be_r <= 4'b1111;
       end else begin
         axis_rq_tkeep_r <= axis_rq_tkeep_r;
         axis_rq_tlast_r <= axis_rq_tlast_r;
@@ -593,63 +1049,25 @@ module dma_rq_logic #(
   // Get the total numbers of words and the total numer of TLPs in a transition
   always @(negedge RST_N or posedge CLK) begin
     if (!RST_N) begin
-      mem_wr_total_tlp_r      <= 32'b0;
-      mem_wr_total_words_r    <= 64'b0;
-      mem_wr_last_tlp_words_r <= 64'h0;
-    end else begin
-      if(ENGINE_VALID && !end_of_operation_r && !end_of_operation  && capabilities_s[0] ) begin
-        mem_wr_total_words_r <= adapted_size_at_descriptor_s[63:2];
-
-        if(adapted_size_at_descriptor_s[C_LOG2_MAX_PAYLOAD-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
-          mem_wr_total_tlp_r      <= (adapted_size_at_descriptor_s>>(log2_max_words_tlp_s+2))  + 1; // Express size at descriptor as 32 bit word.
-          mem_wr_last_tlp_words_r <= ((adapted_size_at_descriptor_s&{C_LOG2_MAX_PAYLOAD{1'b1}}) >> 2) ;
-        end else begin
-          mem_wr_total_tlp_r      <= adapted_size_at_descriptor_s>>(log2_max_words_tlp_s+2);
-          mem_wr_last_tlp_words_r <= max_words_tlp_s;
-        end
-     // end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
-     //   mem_wr_total_tlp_r <= 32'b0;
-      end else if(ENGINE_VALID && (end_of_operation_r||end_of_operation)) begin
-        mem_wr_total_tlp_r <= 32'b0;
-      end else begin
-        mem_wr_total_tlp_r      <= mem_wr_total_tlp_r;
-        mem_wr_total_words_r    <= mem_wr_total_words_r;
-        mem_wr_last_tlp_words_r <= mem_wr_last_tlp_words_r;
-      end
-    end
-  end
-
-  always @(negedge RST_N or posedge CLK) begin
-    if (!RST_N) begin
-      mem_wr_middle_tlp_words_r <= 64'h0;
-    end else begin
-      mem_wr_middle_tlp_words_r <= adapted_size_at_descriptor_s[63:2] <= max_words_tlp_s ? adapted_size_at_descriptor_s[63:2]  : max_words_tlp_s;
-    end
-  end
-
-  always @(negedge RST_N or posedge CLK) begin
-    if (!RST_N) begin
-      mem_rd_total_tlp_r      <= 32'b0;
-      mem_rd_total_words_r    <= 64'b0;
       mem_rd_last_tlp_words_r <= 64'h0;
     end else begin
-      if(ENGINE_VALID && !end_of_operation_r && !end_of_operation && capabilities_s[1] ) begin
-        mem_rd_total_words_r <= adapted_size_at_descriptor_s[63:2];
+      if(ENGINE_VALID && !end_of_operation_r && !end_of_operation) begin
 
-        if(adapted_size_at_descriptor_s[C_LOG2_MAX_READ_REQUEST-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
-          mem_rd_total_tlp_r      <= (adapted_size_at_descriptor_s>>(log2_max_words_read_request_s+2))  + 1; // Express size at descriptor as 32 bit word.
-          mem_rd_last_tlp_words_r <= ((adapted_size_at_descriptor_s&{C_LOG2_MAX_READ_REQUEST{1'b1}}) >> 2) ;
+        if(capabilities_s[0]) begin
+          if(SIZE_AT_DESCRIPTOR[C_LOG2_MAX_PAYLOAD-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
+            mem_rd_last_tlp_words_r <= ((SIZE_AT_DESCRIPTOR&{C_LOG2_MAX_PAYLOAD{1'b1}}) >> 2) ;
+          end else begin
+            mem_rd_last_tlp_words_r <= max_words_tlp_s;
+          end
         end else begin
-          mem_rd_total_tlp_r      <= adapted_size_at_descriptor_s>>(log2_max_words_read_request_s+2);
-          mem_rd_last_tlp_words_r <= max_words_tlp_s;
+          if(SIZE_AT_DESCRIPTOR[C_LOG2_MAX_READ_REQUEST-1:0] > 0) begin // Get the modulus 2**(log2_max_words_tlp_s)
+            mem_rd_last_tlp_words_r <= ((SIZE_AT_DESCRIPTOR&{C_LOG2_MAX_READ_REQUEST{1'b1}}) >> 2) ;
+          end else begin
+            mem_rd_last_tlp_words_r <= max_words_tlp_s;
+          end
         end
-      //end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
-      //  mem_rd_total_tlp_r <= 32'b0;
-      end else if(ENGINE_VALID && (end_of_operation_r||end_of_operation)) begin
-        mem_rd_total_tlp_r <= 32'b0;
+        //end else if(ENGINE_VALID &&  (ENGINE_VALID  !end_of_operation_r) begin
       end else begin
-        mem_rd_total_tlp_r      <= mem_rd_total_tlp_r;
-        mem_rd_total_words_r    <= mem_rd_total_words_r;
         mem_rd_last_tlp_words_r <= mem_rd_last_tlp_words_r;
       end
     end
@@ -657,144 +1075,10 @@ module dma_rq_logic #(
 
 
 
-  ////////
-  // · Infer the number of words in the current TLP
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      mem_wr_remaining_words_r <= 64'h0;
-      mem_wr_next_remainder_r  <= 64'h0;
-    end else begin
-      case(wr_state)
-        IDLE : begin
-          mem_wr_remaining_words_r <= mem_wr_middle_tlp_words_r;
-          mem_wr_next_remainder_r  <= mem_wr_middle_tlp_words_r;
-        end
-        INIT_WRITE : begin
-          if( M_AXIS_RQ_TREADY && one_word_at_buffer_s ) begin
-            if(last_word_at_tlp_s) begin
-              mem_wr_remaining_words_r <= mem_wr_middle_tlp_words_r;
-              mem_wr_next_remainder_r  <= mem_wr_middle_tlp_words_r;
-            end else begin
-              mem_wr_remaining_words_r <= mem_wr_remaining_words_r - 4;
-              mem_wr_next_remainder_r  <= mem_wr_next_remainder_r - 4;
-            end
-          end
-        end
-        WRITE : begin
-          if(M_AXIS_RQ_TREADY) begin
-            if((one_word_at_buffer_s && last_word_at_tlp_s) || (two_words_at_buffer_s && last_two_words_at_tlp_s)) begin
-              if(mem_wr_current_tlp_r == mem_wr_total_tlp_r - 1) begin
-                mem_wr_remaining_words_r <= mem_wr_last_tlp_words_r;
-                mem_wr_next_remainder_r  <= mem_wr_last_tlp_words_r;
-              end else begin
-                mem_wr_remaining_words_r <= max_words_tlp_s;
-                mem_wr_next_remainder_r  <= max_words_tlp_s;
-              end
-            end else if( two_words_at_buffer_s ) begin
-              mem_wr_remaining_words_r <= mem_wr_remaining_words_r - 8;
-              mem_wr_next_remainder_r  <= mem_wr_next_remainder_r - 8;
-            end
-          end
-        end
-      endcase
-    end
-  end
 
-
-  always @(negedge RST_N or posedge CLK) begin
-    if (!RST_N) begin
-      mem_rd_middle_tlp_words_r <= 64'h0;
-    end else begin
-      mem_rd_middle_tlp_words_r <= adapted_size_at_descriptor_s[63:2] <= max_words_read_request_s ? adapted_size_at_descriptor_s[63:2] : max_words_read_request_s;
-    end
-  end
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      mem_rd_remaining_words_r <= 64'h0;
-    end else begin
-      case(wr_state)
-        IDLE : begin
-          mem_rd_remaining_words_r <= mem_rd_middle_tlp_words_r;
-        end
-        INIT_READ : begin
-          if(M_AXIS_RQ_TREADY) begin
-            if(mem_rd_current_tlp_r >= mem_rd_total_tlp_r-1) begin
-              mem_rd_remaining_words_r <= mem_rd_last_tlp_words_r;
-            end else begin
-              mem_rd_remaining_words_r <= mem_rd_middle_tlp_words_r;
-            end
-          end
-        end
-      endcase
-    end
-  end
-
-
-
-  /////////
-  // Update the current TLP and memory offset
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      mem_wr_addr_pointed_by_descriptor_r <= 64'b0;
-      mem_wr_current_tlp_r                <= 32'h1;
-    end else begin
-      case(wr_state)
-        IDLE : begin
-          if (M_AXIS_RQ_TREADY) begin
-            mem_wr_current_tlp_r                <= 32'h1;
-            mem_wr_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR;
-          end
-        end
-        INIT_WRITE : begin
-          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s) begin
-            mem_wr_current_tlp_r                <= mem_wr_current_tlp_r+1;
-            mem_wr_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR + (mem_wr_current_tlp_r<<(log2_max_words_tlp_s+2));
-          end
-        end
-        WRITE : begin
-          if(M_AXIS_RQ_TREADY) begin
-            if((two_words_at_buffer_s && last_two_words_at_tlp_s) || (one_word_at_buffer_s && last_word_at_tlp_s)) begin
-              mem_wr_current_tlp_r                <= mem_wr_current_tlp_r+1;
-              mem_wr_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR + (mem_wr_current_tlp_r<<(log2_max_words_tlp_s+2));
-            end
-          end
-        end
-        default : begin
-          mem_wr_addr_pointed_by_descriptor_r <= mem_wr_addr_pointed_by_descriptor_r;
-          mem_wr_current_tlp_r                <= mem_wr_current_tlp_r;
-        end
-      endcase
-    end
-  end
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      mem_rd_addr_pointed_by_descriptor_r <= 64'b0;
-      mem_rd_current_tlp_r                <= 32'h1;
-    end else begin
-      case(wr_state)
-        IDLE : begin
-          if (M_AXIS_RQ_TREADY) begin
-            mem_rd_current_tlp_r                <= 32'h1;
-            mem_rd_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR;
-          end
-        end
-        INIT_READ : begin
-          if((current_tags_r & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY) begin
-            mem_rd_current_tlp_r                <= mem_rd_current_tlp_r+1;
-            mem_rd_addr_pointed_by_descriptor_r <= ADDR_AT_DESCRIPTOR + (mem_rd_current_tlp_r<<(log2_max_words_read_request_s+2));
-          end
-        end
-
-        default : begin
-          mem_rd_addr_pointed_by_descriptor_r <= mem_rd_addr_pointed_by_descriptor_r;
-          mem_rd_current_tlp_r                <= mem_rd_current_tlp_r;
-        end
-      endcase
-    end
-  end
   assign c2s_rq_tag_s = mem_wr_current_tlp_r-1;
 
-  assign WORD_COUNT = mem_wr_total_words_r;
+  assign WORD_COUNT = 0;
 
 
 
@@ -809,102 +1093,6 @@ module dma_rq_logic #(
     end
   end
 
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      state <= IDLE;
-    end else begin
-      case(state)
-        IDLE : begin
-          if(M_AXIS_RQ_TREADY) begin //Assure previous packets have been sent
-            if( ENGINE_VALID && !end_of_operation_r  && !end_of_operation  && (mem_wr_current_tlp_r <= mem_wr_total_tlp_r || mem_rd_current_tlp_r <= mem_rd_total_tlp_r )) begin
-              state <= WAIT_WR_OP;
-            end else begin
-              state <= IDLE;
-            end
-          end else begin
-            state <= IDLE;
-          end
-        end
-        WAIT_WR_OP : begin
-          if(end_of_operation) begin
-            state <= IDLE;
-          end else begin
-            state <= WAIT_WR_OP;
-          end
-        end
-        default : begin
-          state <= IDLE;
-        end
-      endcase
-    end
-  end
-
-  ////////
-  // FSM
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      wr_state <= IDLE;
-    end else begin
-      case(wr_state)
-        IDLE : begin // TODO: Check both possibilities (read/write)
-          if(M_AXIS_RQ_TREADY && capabilities_s[0] && ENGINE_VALID && !end_of_operation_r  && !end_of_operation  && (mem_wr_current_tlp_r <= mem_wr_total_tlp_r)) begin  // C2S engine
-            wr_state <= INIT_WRITE;
-          end else if(M_AXIS_RQ_TREADY && capabilities_s[1] && ENGINE_VALID && !end_of_operation_r && !end_of_operation && (mem_rd_current_tlp_r <= mem_rd_total_tlp_r)) begin
-            wr_state <= INIT_READ;
-          end
-        end
-        INIT_WRITE : begin     // Write to the Completer the TLP header.
-          if(M_AXIS_RQ_TREADY) begin
-            if( !one_word_at_buffer_s ) begin // There is no data.
-              wr_state <= INIT_WRITE;
-            end else if(last_word_at_tlp_s) begin // We complete the transfer in one cycle
-              if(mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-                wr_state <= capabilities_s[1] ? INIT_READ : IDLE;
-              end else begin
-                wr_state = INIT_WRITE;
-              end
-            end else begin      //Else we have to send more packets
-              wr_state <= WRITE;
-            end
-          end else begin
-            wr_state <= INIT_WRITE;
-          end
-        end
-        WRITE : begin          // Write to the Completer the rest of the information.
-          if(M_AXIS_RQ_TREADY) begin
-            if((last_word_at_tlp_s && one_word_at_buffer_s) || (last_two_words_at_tlp_s && two_words_at_buffer_s)) begin
-              if(mem_wr_total_tlp_r <= mem_wr_current_tlp_r) begin
-                wr_state <= capabilities_s[1] ? INIT_READ : IDLE;
-              end else begin
-                wr_state <= INIT_WRITE;
-              end
-            end else begin
-              wr_state <= WRITE;
-            end
-          end else begin
-            wr_state <= WRITE;
-          end
-        end
-        INIT_READ : begin
-          if(M_AXIS_RQ_TREADY && mem_rd_total_tlp_r <= mem_rd_current_tlp_r && (current_tags_r & window_size_mask_r)!=window_size_mask_r) begin
-            wr_state <= WAIT_READ;
-          end else begin
-            wr_state <= INIT_READ;
-          end
-        end
-        WAIT_READ : begin
-          if(end_of_operation) begin
-            wr_state <= IDLE;
-          end else begin
-            wr_state <= WAIT_READ;
-          end
-        end
-        default : begin
-          wr_state <= IDLE;
-        end
-      endcase
-    end
-  end
 
 
   ////////
@@ -931,16 +1119,34 @@ module dma_rq_logic #(
   endfunction
 
   generate for  (j=0; j<C_WINDOW_SIZE; j=j+1) begin
-      always @(negedge RST_N or posedge CLK) begin
-        if(!RST_N) begin
-          current_tags_r[j] <= 0;
-          size_tags_r[j] <= 0;
-        end else begin
-          if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && j==firstFree(current_tags_r)) begin
-            current_tags_r[j] <= !COMPLETED_TAGS[j];
-            size_tags_r[j] <= current_tags_r[j] ?  size_tags_r[j] : mem_rd_remaining_words_r[10:0]; //How many bytes are we waiting?
+      assign current_tags_s[j] = COMPLETED_TAGS[j] && !axis_rq_tvalid_r ? 1'b0 : current_tags_r[j];
+
+      if(j==0) begin
+        always @(negedge RST_N or posedge CLK) begin
+          if(!RST_N) begin
+            current_tags_r[j] <= 0;
+            size_tags_r[j] <= 0;
           end else begin
-            current_tags_r[j] <= current_tags_r[j] & !COMPLETED_TAGS[j];
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 )|| (END_OF_TAG && COMPLETED_TAGS&& !axis_rq_tvalid_r ))) begin
+              current_tags_r[j] <= 1'b1;
+              size_tags_r[j] <= current_tags_r[j] ?  size_tags_r[j] : current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
+            end else begin
+              current_tags_r[j] <= current_tags_r[j] & !COMPLETED_TAGS[j];
+            end
+          end
+        end
+      end else begin
+        always @(negedge RST_N or posedge CLK) begin
+          if(!RST_N) begin
+            current_tags_r[j] <= 0;
+            size_tags_r[j] <= 0;
+          end else begin
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 && current_tags_s[0+:j]=={j{1'b1}})|| (END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r ))) begin
+              current_tags_r[j] <= 1'b1; //!COMPLETED_TAGS[j]; //1'b1;
+              size_tags_r[j] <= current_tags_r[j] ?  size_tags_r[j] : current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
+            end else begin
+              current_tags_r[j] <= current_tags_r[j] & !COMPLETED_TAGS[j];
+            end
           end
         end
       end
@@ -949,12 +1155,16 @@ module dma_rq_logic #(
 
 
   assign BUSY_TAGS    = current_tags_r;
-  assign s2c_rq_tag_s = firstFree(current_tags_r);
+  assign s2c_rq_tag_s = firstFree(current_tags_s);
+
 
 
   reg update_latency_r;
   reg [63:0]  current_latency_r;
   reg [63:0]  time_comp_r;
+  reg  [C_WINDOW_SIZE-1:0] latency_tags_r    ; // Number of asked tags (memory read) that hasnt been received yet.
+  wire  [C_WINDOW_SIZE-1:0] latency_tags_s    ; // Number of asked tags (memory read) that hasnt been received yet.
+
   reg [63:0]  time_req_r;
   reg [63:0]  bytes_comp_r;
   reg [63:0]  bytes_req_r;
@@ -977,14 +1187,57 @@ module dma_rq_logic #(
     end
   end
 
+
+  generate for  (j=0; j<C_WINDOW_SIZE; j=j+1) begin
+      assign latency_tags_s[j] = COMPLETED_TAGS[j] && !axis_rq_tvalid_r ? END_OF_TAG && COMPLETED_TAGS  && M_AXIS_RQ_TREADY && wr_state == INIT_READ : latency_tags_r[j];
+
+      if(j==0) begin
+        always @(negedge RST_N or posedge CLK) begin
+          if(!RST_N) begin
+            latency_tags_r[j] <= 0;
+          end else begin
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && latency_tags_s[j] == 1'b0 && (mem_rd_current_tlp_r==mem_rd_current_tlp_modulus_r)) begin
+              latency_tags_r[j] <= 1'b1;
+            end else begin
+              latency_tags_r[j] <= latency_tags_r[j] & !COMPLETED_TAGS[j];
+            end
+          end
+        end    
+      end else begin
+        always @(negedge RST_N or posedge CLK) begin
+          if(!RST_N) begin
+            latency_tags_r[j] <= 0;
+          end else begin
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && latency_tags_s[j] == 1'b0 && latency_tags_s[0+:j]==-1 && (mem_rd_current_tlp_r==mem_rd_current_tlp_modulus_r)) begin
+              latency_tags_r[j] <= 1'b1;
+            end else begin
+              latency_tags_r[j] <= latency_tags_r[j] & !COMPLETED_TAGS[j];
+            end
+          end
+        end        
+      end        
+    end
+  endgenerate
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
       current_latency_r <= 64'b0;
+      time_comp_r <= 64'b0;
     end else begin
       if(stop_latency) begin
         current_latency_r <= 64'b0;
+        time_comp_r <= 64'b0;
       end else begin
         current_latency_r <= current_latency_r+1;
+
+        if(capabilities_s[1]) begin
+          if((mem_rd_current_tlp_r==mem_rd_current_tlp_modulus_r)||latency_tags_r!=0) begin
+            time_comp_r <= time_comp_r+1;
+          end
+        end else begin
+          if((mem_wr_current_tlp_r==mem_wr_current_tlp_modulus_r)) begin
+            time_comp_r <= time_comp_r+1;
+          end
+        end
       end
     end
   end
@@ -999,20 +1252,6 @@ module dma_rq_logic #(
         time_req_r <= time_req_r+1;
       end else if(wr_state != WAIT_READ && time_req_r) begin
         time_req_r <= time_req_r+1;
-      end
-    end
-  end
-
-  always @(negedge RST_N or posedge CLK) begin
-    if(!RST_N) begin
-      time_comp_r <= 64'b0;
-    end else begin
-      if(stop_latency) begin
-        time_comp_r <= 64'b0;
-      end else if(wr_state!=IDLE && S_AXIS_RC_TVALID && S_AXIS_RC_TREADY ) begin
-        time_comp_r <= time_comp_r+1;
-      end else if(time_comp_r) begin
-        time_comp_r <= time_comp_r+1;
       end
     end
   end

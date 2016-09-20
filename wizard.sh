@@ -31,8 +31,6 @@ operationMenu() {
 		v) cd FPGA; sh scripts/create_pcie_ref_project.sh; sh scripts/build_project_vc709.sh; sh clean.sh; cd ..;;
 		w) cd FPGA; sh scripts/implement_design.sh; sh clean.sh; cd ..;;
 		p) cd FPGA; sh scripts/program_fpga.sh; sh clean.sh; cd ..;;
-		t) cd FPGA; perl scripts/enable_bw_test.pl -s; sh clean.sh; cd ..;;
-		d) cd FPGA; perl scripts/enable_bw_test.pl -u; sh clean.sh; cd ..;;
 		0) echo "Bye"; cd FPGA; sh clean.sh; cd ..;;
 		*) echo "Oopps!!! Bad option"; cd FPGA; sh clean.sh; cd ..;;
 	esac
@@ -53,8 +51,6 @@ if hash dialog 2>/dev/null; then
 	s "Create a vivado project with its core IPs for NetFPGA SUME" \
 	v "Create a vivado project with its core IPs for VC709" \
 	w "Synthesize, implement and generate bitstream" \
-	t "Modify the sources in order to perform bandwidth measures"		 \
-	d "Modify the sources in order to disable bandwidth measures"		 \
 	p "Program the FPGA with a previously generated bitstream" \
 	0 "Exit" 2>"${INPUT}"
 	 
@@ -71,8 +67,6 @@ else
 	echo "* [v] Create a vivado project with its core IPs (VC709)          *"
 	echo "* [w] Synthesize, implement and generate bitstream               *"
 	echo "* [p] Program the FPGA with a previously generated bitstream     *"
-	echo "* [t] Modify the sources in order to perform bandwidth measures  *"
-	echo "* [d] Modify the sources in order to disable bandwidth measures  *"
 	echo "* [0] Exit/Stop                                                  *"
 	echo "******************************************************************"
 	echo -n "Enter your menu choice: "

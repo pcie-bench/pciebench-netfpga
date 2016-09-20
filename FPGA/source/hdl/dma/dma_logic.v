@@ -118,19 +118,15 @@ module dma_logic #(
 	input  wire [  C_DATA_WIDTH/8-1:0] S_MEM_IFACE_WE     ,
 	output wire                        S_MEM_IFACE_ACK    ,
 	//
-	output wire [                 1:0] IRQ                ,
 	output wire                        OPERATION_IN_COURSE
 );
 
 
-	wire [ 7:0] status_byte_s                    ;
-	wire [ 7:0] control_byte_s                   ;
-	wire [ 7:0] benchmarking_control_byte_s      ;
-	wire [63:0] addr_at_descriptor_s             ;
-	wire [63:0] size_at_descriptor_s             ;
-	wire [63:0] benchmarking_addr_at_descriptor_s;
-	wire [63:0] benchmarking_size_at_descriptor_s;
-	wire [63:0] window_size_s                    ;
+	wire [ 8:0] status_byte_s       ;
+	wire [ 7:0] control_byte_s      ;
+	wire [63:0] addr_at_descriptor_s;
+	wire [63:0] size_at_descriptor_s;
+	wire [63:0] window_size_s       ;
 
 	reg  [63:0] byte_count_r   ;
 	wire [63:0] byte_count_rc_s;
@@ -143,21 +139,23 @@ module dma_logic #(
 	wire [63:0] original_bytes_req_s      ;
 	wire [63:0] original_bytes_comp_s     ;
 
-	wire        update_latency_s ;
-	wire [63:0] current_latency_s;
-	wire [63:0] time_req_s       ;
-	wire [63:0] time_comp_s      ;
-	wire [63:0] bytes_req_s      ;
-	wire [63:0] bytes_comp_s     ;
+	wire        update_latency_s    ;
+	wire [63:0] current_latency_s   ;
+	wire [63:0] time_req_s          ;
+	wire [63:0] time_comp_s         ;
+	wire [63:0] bytes_req_s         ;
+	wire [63:0] bytes_comp_s        ;
+	wire [63:0] size_at_host_s      ;
+	wire [63:0] number_tlps_s       ;
+	wire [63:0] address_gen_offset_s;
+	wire [63:0] address_gen_incr_s  ;
 
 	wire [C_DATA_WIDTH-1:0] s_mem_iface_dout_dma_reg_s;
 	wire                    s_mem_iface_ack_dma_reg_s ;
 
-	reg  user_reset_r               ;
-	wire dma_reset_n                ;
-	wire valid_engine_s             ;
-	wire benchmarking_valid_engine_s;
-	wire irq_s                      ;
+	reg  user_reset_r  ;
+	wire dma_reset_n   ;
+	wire valid_engine_s;
 
 	assign dma_reset_n = RST_N & (!user_reset_r);
 
@@ -167,32 +165,35 @@ module dma_logic #(
 		.C_ENGINE_TABLE_OFFSET(C_ENGINE_TABLE_OFFSET),
 		.C_DEFAULT_WINDOW_SIZE(4                    )
 	) dma_engine_manager_i (
-		.CLK             (CLK                        ),
-		.RST_N           (dma_reset_n                ),
+		.CLK               (CLK                       ),
+		.RST_N             (dma_reset_n               ),
 		
-		.S_MEM_IFACE_EN  (S_MEM_IFACE_EN             ),
-		.S_MEM_IFACE_ADDR(S_MEM_IFACE_ADDR           ),
-		.S_MEM_IFACE_DOUT(s_mem_iface_dout_dma_reg_s ),
-		.S_MEM_IFACE_DIN (S_MEM_IFACE_DIN            ),
-		.S_MEM_IFACE_WE  (S_MEM_IFACE_WE             ),
-		.S_MEM_IFACE_ACK (s_mem_iface_ack_dma_reg_s  ),
+		.S_MEM_IFACE_EN    (S_MEM_IFACE_EN            ),
+		.S_MEM_IFACE_ADDR  (S_MEM_IFACE_ADDR          ),
+		.S_MEM_IFACE_DOUT  (s_mem_iface_dout_dma_reg_s),
+		.S_MEM_IFACE_DIN   (S_MEM_IFACE_DIN           ),
+		.S_MEM_IFACE_WE    (S_MEM_IFACE_WE            ),
+		.S_MEM_IFACE_ACK   (s_mem_iface_ack_dma_reg_s ),
 		
-		.ACTIVE_ENGINE   (0                          ),
-		.VALID_ENGINE    (valid_engine_s             ),
-		.STATUS_BYTE     (status_byte_s              ),
-		.CONTROL_BYTE    (benchmarking_control_byte_s),
-		.BYTE_COUNT      (byte_count_r               ),
-		.DESCRIPTOR_ADDR (addr_at_descriptor_s       ),
-		.DESCRIPTOR_SIZE (size_at_descriptor_s       ),
-		.WINDOW_SIZE     (window_size_s              ),
-		.UPDATE_LATENCY  (update_latency_s           ),
-		.CURRENT_LATENCY (current_latency_s          ),
-		
-		.TIME_AT_REQ     (time_req_s                 ),
-		.TIME_AT_COMP    (time_comp_s                ),
-		.BYTES_AT_REQ    (bytes_req_s                ),
-		.BYTES_AT_COMP   (bytes_comp_s               ),
-		.IRQ             (irq_s                      )
+		.ACTIVE_ENGINE     (0                         ),
+		.VALID_ENGINE      (valid_engine_s            ),
+		.STATUS_BYTE       (status_byte_s             ),
+		.CONTROL_BYTE      (control_byte_s            ),
+		.BYTE_COUNT        (byte_count_r              ),
+		.DESCRIPTOR_ADDR   (addr_at_descriptor_s      ),
+		.DESCRIPTOR_SIZE   (size_at_descriptor_s      ),
+		.SIZE_AT_HOST      (size_at_host_s            ),
+		.NUMBER_TLPS       (number_tlps_s             ),
+		.ADDRESS_GEN_OFFSET(address_gen_offset_s      ),
+		.ADDRESS_GEN_INCR  (address_gen_incr_s        ),
+		.WINDOW_SIZE       (window_size_s             ),
+		.UPDATE_LATENCY    (update_latency_s          ),
+		.CURRENT_LATENCY   (current_latency_s         ),
+		.TIME_AT_REQ       (time_req_s                ),
+		.TIME_AT_COMP      (time_comp_s               ),
+		.BYTES_AT_REQ      (bytes_req_s               ),
+		.BYTES_AT_COMP     (bytes_comp_s              ),
+		.IRQ               (                          )
 	);
 
 
@@ -203,22 +204,21 @@ module dma_logic #(
 	memory write requests or memory read requests. Multiple directions are not
 	supported by this implementation
 	*/
-	wire [1:0] capabilities           ;
-	wire       is_end_of_operation_s  ;
-	wire       is_engine_enable_s     ;
-	wire       is_engine_stopped_s    ;
-	wire       is_engine_pending_irq_s;
+	wire [1:0] capabilities         ;
+	wire       is_end_of_operation_s;
+	wire       is_engine_enable_s   ;
+	wire       is_engine_stopped_s  ;
 
-	wire [C_WINDOW_SIZE-1:0] completed_tags_s;
-	wire [C_WINDOW_SIZE-1:0] busy_tags_s     ;
+	wire [   C_WINDOW_SIZE-1:0] completed_tags_s;
+	wire [   C_WINDOW_SIZE-1:0] busy_tags_s     ;
+	wire                        end_of_tag_s    ;
+	wire [                 7:0] last_tag_s      ;
+	wire [C_WINDOW_SIZE*11-1:0] size_tags_s     ;
 
-	wire [C_WINDOW_SIZE*11-1:0] size_tags_s;
-
-	assign capabilities            = status_byte_s[6:5];
-	assign is_end_of_operation_s   = control_byte_s[3];
-	assign is_engine_enable_s      = status_byte_s[0];
-	assign is_engine_stopped_s     = status_byte_s[3];
-	assign is_engine_pending_irq_s = status_byte_s[7];
+	assign capabilities          = status_byte_s[6:5];
+	assign is_end_of_operation_s = control_byte_s[3];
+	assign is_engine_enable_s    = status_byte_s[0];
+	assign is_engine_stopped_s   = status_byte_s[3];
 
 	reg engine_finished_r;
 
@@ -277,58 +277,7 @@ module dma_logic #(
 		.m_axis_tlast (c2s_fifo_tlast_s )
 	);
 
-	wire [                63:0] word_count_r             ;
-	wire [C_BUS_DATA_WIDTH-1:0] original_axis_rq_tdata_s ;
-	wire [                59:0] original_axis_rq_tuser_s ;
-	wire                        original_axis_rq_tlast_s ;
-	wire [C_BUS_KEEP_WIDTH-1:0] original_axis_rq_tkeep_s ;
-	wire                        original_axis_rq_tvalid_s;
-	wire [                 3:0] original_axis_rq_tready_s;
-
-	dma_benchmarking #(.C_MODE(0)) dma_benchmarking_i (
-		.CLK                        (CLK                              ),
-		.RST_N                      (dma_reset_n                      ),
-		.ORIGINAL_CONTROL_BYTE      (control_byte_s                   ),
-		.FAKED_CONTROL_BYTE         (benchmarking_control_byte_s      ),
-		.ORIGINAL_ENGINE_VALID      (valid_engine_s                   ),
-		.FAKED_ENGINE_VALID         (benchmarking_valid_engine_s      ),
-		.ORIGINAL_SIZE_AT_DESCRIPTOR(size_at_descriptor_s             ),
-		.ORIGINAL_ADDR_AT_DESCRIPTOR(addr_at_descriptor_s             ),
-		.FAKED_SIZE_AT_DESCRIPTOR   (benchmarking_size_at_descriptor_s),
-		.FAKED_ADDR_AT_DESCRIPTOR   (benchmarking_addr_at_descriptor_s),
-		
-		
-		.M_AXIS_RQ_TDATA            (original_axis_rq_tdata_s         ),
-		.M_AXIS_RQ_TUSER            (original_axis_rq_tuser_s         ),
-		.M_AXIS_RQ_TLAST            (original_axis_rq_tlast_s         ),
-		.M_AXIS_RQ_TKEEP            (original_axis_rq_tkeep_s         ),
-		.M_AXIS_RQ_TVALID           (original_axis_rq_tvalid_s        ),
-		.M_AXIS_RQ_TREADY           (original_axis_rq_tready_s        ),
-		.S_AXIS_RC_TVALID           (S_AXIS_RC_TVALID                 ),
-		.S_AXIS_RC_TREADY           (S_AXIS_RC_TREADY                 ),
-		
-		.FAKED_AXIS_RQ_TDATA        (M_AXIS_RQ_TDATA                  ),
-		.FAKED_AXIS_RQ_TUSER        (M_AXIS_RQ_TUSER                  ),
-		.FAKED_AXIS_RQ_TLAST        (M_AXIS_RQ_TLAST                  ),
-		.FAKED_AXIS_RQ_TKEEP        (M_AXIS_RQ_TKEEP                  ),
-		.FAKED_AXIS_RQ_TVALID       (M_AXIS_RQ_TVALID                 ),
-		.FAKED_AXIS_RQ_TREADY       (M_AXIS_RQ_TREADY                 ),
-		
-		
-		.ORIGINAL_UPDATE_LATENCY    (original_update_latency_s        ),
-		.ORIGINAL_CURRENT_LATENCY   (original_current_latency_s       ),
-		.ORIGINAL_TIME_AT_REQ       (original_time_req_s              ),
-		.ORIGINAL_TIME_AT_COMP      (original_time_comp_s             ),
-		.ORIGINAL_BYTES_AT_REQ      (original_bytes_req_s             ),
-		.ORIGINAL_BYTES_AT_COMP     (original_bytes_comp_s            ),
-		
-		.FAKED_UPDATE_LATENCY       (update_latency_s                 ),
-		.FAKED_CURRENT_LATENCY      (current_latency_s                ),
-		.FAKED_TIME_AT_REQ          (time_req_s                       ),
-		.FAKED_TIME_AT_COMP         (time_comp_s                      ),
-		.FAKED_BYTES_AT_REQ         (bytes_req_s                      ),
-		.FAKED_BYTES_AT_COMP        (bytes_comp_s                     )
-	);
+	wire [63:0] word_count_r;
 
 	// Manage the RQ interface
 	dma_rq_logic #(
@@ -339,56 +288,68 @@ module dma_logic #(
 		.C_LOG2_MAX_PAYLOAD     (C_LOG2_MAX_PAYLOAD     ),
 		.C_LOG2_MAX_READ_REQUEST(C_LOG2_MAX_READ_REQUEST)
 	) dma_rq_logic_i (
-		.CLK                (CLK                              ),
-		.RST_N              (dma_reset_n                      ),
+		.CLK                (CLK                 ),
+		.RST_N              (dma_reset_n         ),
 		
 		////////////
 		//  PCIe Interface: 1 AXI-Stream (requester side)
 		////////////
-		.M_AXIS_RQ_TDATA    (original_axis_rq_tdata_s         ),
-		.M_AXIS_RQ_TUSER    (original_axis_rq_tuser_s         ),
-		.M_AXIS_RQ_TLAST    (original_axis_rq_tlast_s         ),
-		.M_AXIS_RQ_TKEEP    (original_axis_rq_tkeep_s         ),
-		.M_AXIS_RQ_TVALID   (original_axis_rq_tvalid_s        ),
-		.M_AXIS_RQ_TREADY   (original_axis_rq_tready_s        ),
+		.M_AXIS_RQ_TDATA    (M_AXIS_RQ_TDATA     ),
+		.M_AXIS_RQ_TUSER    (M_AXIS_RQ_TUSER     ),
+		.M_AXIS_RQ_TLAST    (M_AXIS_RQ_TLAST     ),
+		.M_AXIS_RQ_TKEEP    (M_AXIS_RQ_TKEEP     ),
+		.M_AXIS_RQ_TVALID   (M_AXIS_RQ_TVALID    ),
+		.M_AXIS_RQ_TREADY   (M_AXIS_RQ_TREADY    ),
 		
 		
-		.S_AXIS_RC_TDATA    (S_AXIS_RC_TDATA                  ),
-		.S_AXIS_RC_TUSER    (S_AXIS_RC_TUSER                  ),
-		.S_AXIS_RC_TLAST    (S_AXIS_RC_TLAST                  ),
-		.S_AXIS_RC_TKEEP    (S_AXIS_RC_TKEEP                  ),
-		.S_AXIS_RC_TVALID   (S_AXIS_RC_TVALID                 ),
-		.S_AXIS_RC_TREADY   (S_AXIS_RC_TREADY                 ),
+		.S_AXIS_RC_TDATA    (S_AXIS_RC_TDATA     ),
+		.S_AXIS_RC_TUSER    (S_AXIS_RC_TUSER     ),
+		.S_AXIS_RC_TLAST    (S_AXIS_RC_TLAST     ),
+		.S_AXIS_RC_TKEEP    (S_AXIS_RC_TKEEP     ),
+		.S_AXIS_RC_TVALID   (S_AXIS_RC_TVALID    ),
+		.S_AXIS_RC_TREADY   (S_AXIS_RC_TREADY    ),
 		
 		////////////
 		//  c2s fifo interface: 1 AXI-Stream (data to be transferred in memory write requests)
 		////////////
-		.C2S_FIFO_TREADY    (c2s_fifo_tready_s                ),
-		.C2S_FIFO_TDATA     (c2s_fifo_tdata_s                 ),
-		.C2S_FIFO_TLAST     (c2s_fifo_tlast_s                 ),
-		.C2S_FIFO_TVALID    (c2s_fifo_tvalid_s                ),
-		.C2S_FIFO_TKEEP     (c2s_fifo_tkeep_s                 ),
+		.C2S_FIFO_TREADY    (c2s_fifo_tready_s   ),
+		.C2S_FIFO_TDATA     (c2s_fifo_tdata_s    ),
+		.C2S_FIFO_TLAST     (c2s_fifo_tlast_s    ),
+		.C2S_FIFO_TVALID    (c2s_fifo_tvalid_s   ),
+		.C2S_FIFO_TKEEP     (c2s_fifo_tkeep_s    ),
 		////////////
 		//  Descriptor interface: Interface with the necessary data to complete a memory read/write request.
 		////////////
-		.ENGINE_VALID       (benchmarking_valid_engine_s      ),
-		.STATUS_BYTE        (status_byte_s                    ),
-		.CONTROL_BYTE       (control_byte_s                   ),
-		.BYTE_COUNT         (byte_count_rc_s                  ),
-		.SIZE_AT_DESCRIPTOR (benchmarking_size_at_descriptor_s),
-		.ADDR_AT_DESCRIPTOR (benchmarking_addr_at_descriptor_s),
-		.CURRENT_WINDOW_SIZE(window_size_s                    ),
-		.UPDATE_LATENCY     (original_update_latency_s        ),
-		.CURRENT_LATENCY    (original_current_latency_s       ),
-		.TIME_AT_REQ        (original_time_req_s              ),
-		.TIME_AT_COMP       (original_time_comp_s             ),
-		.BYTES_AT_REQ       (original_bytes_req_s             ),
-		.BYTES_AT_COMP      (original_bytes_comp_s            ),
-		.WORD_COUNT         (word_count_r                     ),
-		.SIZE_TAGS          (size_tags_s                      ),
-		.COMPLETED_TAGS     (completed_tags_s                 ),
-		.BUSY_TAGS          (busy_tags_s                      ),
-		.DEBUG              (                                 )
+		.ENGINE_VALID       (valid_engine_s      ),
+		.STATUS_BYTE        (status_byte_s       ),
+		.CONTROL_BYTE       (control_byte_s      ),
+		.BYTE_COUNT         (byte_count_rc_s     ),
+		
+		
+		
+		.SIZE_AT_DESCRIPTOR (size_at_descriptor_s),
+		.SIZE_AT_HOST       (size_at_host_s      ),
+		.NUMBER_TLPS        (number_tlps_s       ),
+		.ADDR_AT_DESCRIPTOR (addr_at_descriptor_s),
+		.ADDRESS_GEN_OFFSET (address_gen_offset_s),
+		.ADDRESS_GEN_INCR   (address_gen_incr_s  ),
+		.CURRENT_WINDOW_SIZE(window_size_s       ),
+		.UPDATE_LATENCY     (update_latency_s    ),
+		
+		
+		.CURRENT_LATENCY    (current_latency_s   ),
+		.TIME_AT_REQ        (time_req_s          ),
+		.TIME_AT_COMP       (time_comp_s         ),
+		.BYTES_AT_REQ       (bytes_req_s         ),
+		.BYTES_AT_COMP      (bytes_comp_s        ),
+		.WORD_COUNT         (word_count_r        ),
+		.SIZE_TAGS          (size_tags_s         ),
+		.COMPLETED_TAGS     (completed_tags_s    ),
+		.BUSY_TAGS          (busy_tags_s         ),
+		
+		.END_OF_TAG         (end_of_tag_s        ),
+		.LAST_TAG           (last_tag_s          ),
+		.DEBUG              (                    )
 	);
 
 	wire [C_BUS_KEEP_WIDTH-1:0] s2c_fifo_tkeep_s         ;
@@ -438,6 +399,9 @@ module dma_logic #(
 		.BYTE_COUNT         (byte_count_rq_s  ),
 		.SIZE_TAGS          (size_tags_s      ),
 		.COMPLETED_TAGS     (completed_tags_s ),
+		
+		.END_OF_TAG         (end_of_tag_s     ),
+		.LAST_TAG           (last_tag_s       ),
 		.WORD_COUNT         (word_count_r     ),
 		.BUSY_TAGS          (busy_tags_s      ),
 		.CURRENT_WINDOW_SIZE(window_size_s    ),
@@ -473,7 +437,6 @@ module dma_logic #(
 
 	wire [2:0] max_payload_common_block_s    ;
 	wire [2:0] max_readrequest_common_block_s;
-	reg        global_irq_r                  ;
 
 	assign max_payload_common_block_s     = C_LOG2_MAX_PAYLOAD-7;
 	assign max_readrequest_common_block_s = C_LOG2_MAX_READ_REQUEST-7;
@@ -488,7 +451,7 @@ module dma_logic #(
 			if(S_MEM_IFACE_EN) begin
 				case(S_MEM_IFACE_ADDR)
 					C_ENGINE_TABLE_OFFSET + C_NUM_ENGINES*C_OFFSET_BETWEEN_ENGINES: begin
-						s_mem_iface_dout_ctrl_r <= { {64-C_NUM_ENGINES-8{1'b0}}, 2'b0, global_irq_r,max_readrequest_common_block_s, max_payload_common_block_s};
+						s_mem_iface_dout_ctrl_r <= { {64-C_NUM_ENGINES-8{1'b0}}, 3'b0,max_readrequest_common_block_s, max_payload_common_block_s};
 						s_mem_iface_ack_ctrl_r  <= 1'b1;
 					end
 					default : begin
@@ -501,13 +464,11 @@ module dma_logic #(
 	always @(negedge dma_reset_n or posedge CLK) begin
 		if (!dma_reset_n) begin
 			user_reset_r <= 1'b0;
-			global_irq_r <= 1'b0;
 		end else begin
 			if(S_MEM_IFACE_EN  && S_MEM_IFACE_WE) begin
 				case(S_MEM_IFACE_ADDR)
 					C_ENGINE_TABLE_OFFSET + C_NUM_ENGINES*C_OFFSET_BETWEEN_ENGINES : begin
 						if(S_MEM_IFACE_WE[0]) begin
-							global_irq_r <= S_MEM_IFACE_DIN[6];
 							user_reset_r <= S_MEM_IFACE_DIN[7];
 						end
 					end
@@ -521,7 +482,6 @@ module dma_logic #(
 
 	assign S_MEM_IFACE_DOUT = s_mem_iface_ack_ctrl_r ? s_mem_iface_dout_ctrl_r : s_mem_iface_dout_dma_reg_s;
 	assign S_MEM_IFACE_ACK  = s_mem_iface_ack_ctrl_r ? s_mem_iface_ack_ctrl_r : s_mem_iface_ack_dma_reg_s;
-	assign IRQ              = global_irq_r ? irq_s : 0;
 
 endmodule
 

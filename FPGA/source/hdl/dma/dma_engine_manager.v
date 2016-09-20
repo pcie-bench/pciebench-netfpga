@@ -89,12 +89,16 @@ module dma_engine_manager #(
   // Connection with the core Requester DMA interface
   ///////////
   input  wire                      ACTIVE_ENGINE            ,
-  output wire [               7:0] STATUS_BYTE              ,
+  output wire [               8:0] STATUS_BYTE       ,
   input  wire [               7:0] CONTROL_BYTE             ,
   input  wire [              63:0] BYTE_COUNT               ,
   output reg                       VALID_ENGINE             ,
   output reg  [              63:0] DESCRIPTOR_ADDR          ,
   output reg  [              63:0] DESCRIPTOR_SIZE          ,
+  output wire [              63:0] SIZE_AT_HOST      ,
+  output wire [              63:0] NUMBER_TLPS       ,
+  output wire [              63:0] ADDRESS_GEN_OFFSET,
+  output wire [              63:0] ADDRESS_GEN_INCR  ,
   output reg  [              63:0] WINDOW_SIZE              ,
   input  wire                      UPDATE_LATENCY           ,
   input  wire [              63:0] CURRENT_LATENCY          ,
@@ -110,7 +114,7 @@ module dma_engine_manager #(
 
 
   localparam c_offset_between_descriptors = 10'h8;
-  localparam c_offset_engines_config      = 10'h4; // Descriptor j of engine i will be at position  C_ENGINE_TABLE_OFFSET  + j*c_offset_between_descriptors + c_offset_engines_config
+  localparam c_offset_engines_config      = 10'h8; // Descriptor j of engine i will be at position  C_ENGINE_TABLE_OFFSET  + j*c_offset_between_descriptors + c_offset_engines_config
 
   reg mem_ack_pending_pipe_1_r, mem_ack_pending_pipe_2_r, mem_ack_pending_pipe_3_r;
 
@@ -137,6 +141,7 @@ module dma_engine_manager #(
   reg        stop_r        ;
   reg        error_r       ;
   reg [ 1:0] capabilities_r;
+  reg [ 1:0] address_mode_r;
   reg [63:0] time_r        ;
   reg [63:0] byte_count_r  ;
 
@@ -149,6 +154,10 @@ module dma_engine_manager #(
   reg                                 cl_engine_stats_r        ;
   reg [$clog2(C_NUM_DESCRIPTORS)-1:0] active_index_descriptor_r;
   reg [63:0] window_size_r;
+  reg [                         63:0] buffer_at_host_r         ;
+  reg [                         63:0] number_tlps_r            ;
+  reg [                         63:0] address_gen_offset_r     ;
+  reg [                         63:0] address_gen_incr_r       ;
 
   //////////////////////////
   // BRAM Interface
@@ -209,8 +218,12 @@ module dma_engine_manager #(
 
   assign is_end_of_operation_s = CONTROL_BYTE[3];
   assign operation_error_s     = CONTROL_BYTE[4];
-  assign STATUS_BYTE           = {1'b0,capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
+  assign STATUS_BYTE           = {address_mode_r[1:0],capabilities_r[1:0],error_r, stop_r,running_r,reset_r,enable_r};
+  assign SIZE_AT_HOST          = buffer_at_host_r;
+  assign NUMBER_TLPS           = number_tlps_r;
 
+  assign ADDRESS_GEN_OFFSET = address_gen_offset_r;
+  assign ADDRESS_GEN_INCR   = address_gen_incr_r;
 
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
@@ -264,7 +277,12 @@ module dma_engine_manager #(
       cl_engine_stats_r       <= 1'b0;
       last_index_descriptor_r <= 0;
       capabilities_r          <= 2'b10; // S2C by default
+      address_mode_r          <= 2'b00; // Fixed by default
       window_size_r           <= C_DEFAULT_WINDOW_SIZE;
+      buffer_at_host_r        <= 64'h0;
+      address_gen_offset_r    <= 64'h0;
+      address_gen_incr_r      <= 64'h0;
+      number_tlps_r           <= 64'h0;
     end else begin
       reset_r           <= 1'b0; // Automatically clean the reset_r after one cycle.
       cl_engine_stats_r <= 1'b0;
@@ -277,6 +295,7 @@ module dma_engine_manager #(
 
             // Update values
             if(S_MEM_IFACE_WE[0]) begin
+              address_mode_r    = S_MEM_IFACE_DIN[5:4]; // Odd engines -> C2S. Even engines -> S2C
               capabilities_r = S_MEM_IFACE_DIN[3:2]; // Odd engines -> C2S. Even engines -> S2C
               cl_engine_stats_r <= S_MEM_IFACE_DIN[1] | S_MEM_IFACE_DIN[0];
               reset_r        <= S_MEM_IFACE_DIN[1];
@@ -300,6 +319,46 @@ module dma_engine_manager #(
             if(S_MEM_IFACE_WE[5]) window_size_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
             if(S_MEM_IFACE_WE[6]) window_size_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
             if(S_MEM_IFACE_WE[7]) window_size_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
+          end
+          C_ENGINE_TABLE_OFFSET  + 4: begin
+            if(S_MEM_IFACE_WE[0]) buffer_at_host_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
+            if(S_MEM_IFACE_WE[1]) buffer_at_host_r[15:8]   <= S_MEM_IFACE_DIN[15:8];
+            if(S_MEM_IFACE_WE[2]) buffer_at_host_r[23:16]  <= S_MEM_IFACE_DIN[23:16];
+            if(S_MEM_IFACE_WE[3]) buffer_at_host_r[31:24]  <= S_MEM_IFACE_DIN[31:24];
+            if(S_MEM_IFACE_WE[4]) buffer_at_host_r[39:32]  <= S_MEM_IFACE_DIN[39:32];
+            if(S_MEM_IFACE_WE[5]) buffer_at_host_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
+            if(S_MEM_IFACE_WE[6]) buffer_at_host_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
+            if(S_MEM_IFACE_WE[7]) buffer_at_host_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
+          end
+          C_ENGINE_TABLE_OFFSET  + 5: begin
+            if(S_MEM_IFACE_WE[0]) address_gen_offset_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
+            if(S_MEM_IFACE_WE[1]) address_gen_offset_r[15:8]   <= S_MEM_IFACE_DIN[15:8];
+            if(S_MEM_IFACE_WE[2]) address_gen_offset_r[23:16]  <= S_MEM_IFACE_DIN[23:16];
+            if(S_MEM_IFACE_WE[3]) address_gen_offset_r[31:24]  <= S_MEM_IFACE_DIN[31:24];
+            if(S_MEM_IFACE_WE[4]) address_gen_offset_r[39:32]  <= S_MEM_IFACE_DIN[39:32];
+            if(S_MEM_IFACE_WE[5]) address_gen_offset_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
+            if(S_MEM_IFACE_WE[6]) address_gen_offset_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
+            if(S_MEM_IFACE_WE[7]) address_gen_offset_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
+          end
+          C_ENGINE_TABLE_OFFSET  + 6: begin
+            if(S_MEM_IFACE_WE[0]) address_gen_incr_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
+            if(S_MEM_IFACE_WE[1]) address_gen_incr_r[15:8]   <= S_MEM_IFACE_DIN[15:8];
+            if(S_MEM_IFACE_WE[2]) address_gen_incr_r[23:16]  <= S_MEM_IFACE_DIN[23:16];
+            if(S_MEM_IFACE_WE[3]) address_gen_incr_r[31:24]  <= S_MEM_IFACE_DIN[31:24];
+            if(S_MEM_IFACE_WE[4]) address_gen_incr_r[39:32]  <= S_MEM_IFACE_DIN[39:32];
+            if(S_MEM_IFACE_WE[5]) address_gen_incr_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
+            if(S_MEM_IFACE_WE[6]) address_gen_incr_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
+            if(S_MEM_IFACE_WE[7]) address_gen_incr_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
+          end
+          C_ENGINE_TABLE_OFFSET  + 7: begin
+            if(S_MEM_IFACE_WE[0]) number_tlps_r[7:0]    <= S_MEM_IFACE_DIN[7:0];
+            if(S_MEM_IFACE_WE[1]) number_tlps_r[15:8]   <= S_MEM_IFACE_DIN[15:8];
+            if(S_MEM_IFACE_WE[2]) number_tlps_r[23:16]  <= S_MEM_IFACE_DIN[23:16];
+            if(S_MEM_IFACE_WE[3]) number_tlps_r[31:24]  <= S_MEM_IFACE_DIN[31:24];
+            if(S_MEM_IFACE_WE[4]) number_tlps_r[39:32]  <= S_MEM_IFACE_DIN[39:32];
+            if(S_MEM_IFACE_WE[5]) number_tlps_r[47:40]  <= S_MEM_IFACE_DIN[47:40];
+            if(S_MEM_IFACE_WE[6]) number_tlps_r[55:48]  <= S_MEM_IFACE_DIN[55:48];
+            if(S_MEM_IFACE_WE[7]) number_tlps_r[63:56]  <= S_MEM_IFACE_DIN[63:56];
           end
           default : begin
           end

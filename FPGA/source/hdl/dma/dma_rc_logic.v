@@ -99,6 +99,8 @@ module dma_rc_logic #(
   input  wire [C_WINDOW_SIZE*11-1:0] SIZE_TAGS          ,
   input  wire [                63:0] CURRENT_WINDOW_SIZE,
   output wire [   C_WINDOW_SIZE-1:0] COMPLETED_TAGS     ,
+  output wire                        END_OF_TAG         ,
+  output wire [                 7:0] LAST_TAG           ,
   output wire [                63:0] DEBUG
 );
 
@@ -120,7 +122,7 @@ module dma_rc_logic #(
     if (!RST_N) begin
       is_rc_sop_r <= 1'b1;
     end else  begin
-      if(S_AXIS_RC_TLAST & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY) begin
+      if(S_AXIS_RC_TLAST && S_AXIS_RC_TVALID && S_AXIS_RC_TREADY) begin
         is_rc_sop_r <= 1'b1;  // Select the dout from the dma component
       end else if( S_AXIS_RC_TVALID && S_AXIS_RC_TREADY ) begin
         is_rc_sop_r <= 1'b0;  // Else msix
@@ -154,22 +156,56 @@ module dma_rc_logic #(
   assign tlp_tag_s         = S_AXIS_RC_TDATA[71:64];
   assign s2c_fifo_tready_s = S2C_FIFO_TREADY;
 
+
   // Strip the bus and divide it as an array (code more intelligible)
+  reg [C_WINDOW_SIZE-1:0] completed_tags_r;
+  reg                     end_of_tag_r    ;
+  reg [              7:0] tlp_tag_r       ;
+
+  always @(negedge RST_N or posedge CLK) begin
+    if(!RST_N) begin
+      end_of_tag_r <= 1'b0;
+      tlp_tag_r <= 0;
+    end else begin
+      end_of_tag_r <= (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && S_AXIS_RC_TLAST );
+      if(is_rc_sop_r) begin
+        tlp_tag_r <= tlp_tag_s;
+      end
+    end
+  end   
+
+
+  assign END_OF_TAG = end_of_tag_r;
+  assign LAST_TAG   = tlp_tag_r;
   genvar j;
   for(j=0; j<C_WINDOW_SIZE;j=j+1) begin
-    assign size_tags_s[j]    = SIZE_TAGS[11*(j+1)-1:11*j];
-    assign COMPLETED_TAGS[j] = BUSY_TAGS[j] && (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY & S_AXIS_RC_TLAST )
-      && ((is_tag_count_exceeded_r[j]) /* We exceed the requested size. Take into account completions in one pulse*/
-        || (j==tlp_tag_s && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]));
+      assign size_tags_s[j]    = SIZE_TAGS[11*(j+1)-1:11*j];
+
+      assign COMPLETED_TAGS[j] = completed_tags_r[j];
+      always @(negedge RST_N or posedge CLK) begin
+        if(!RST_N) begin
+          completed_tags_r[j] <= 1'b0;
+        end else begin
+          completed_tags_r[j] <= BUSY_TAGS[j] && (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && S_AXIS_RC_TLAST )
+              && ((is_tag_count_exceeded_r[j]) // We exceed the requested size. Take into account completions in one pulse
+                || (j==tlp_tag_s && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]));
+        end
+      end      
   end
 
   generate for (j=0;j<C_WINDOW_SIZE;j=j+1) begin
+
       always @(negedge RST_N or posedge CLK) begin
         if (!RST_N) begin
           word_count_tag_r[j] <= 0;
         end else  begin
           if(is_rc_sop_r & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s ) begin
-            word_count_tag_r[j] <= word_count_tag_r[j] + tlp_dwords_s;
+           // if (COMPLETED_TAGS[j]) begin
+            if(S_AXIS_RC_TLAST && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]) begin
+              word_count_tag_r[j] <= 0;
+            end else begin
+              word_count_tag_r[j] <= word_count_tag_r[j] + tlp_dwords_s;
+            end
           end else begin
             if (COMPLETED_TAGS[j])
               word_count_tag_r[j] <= 0;
@@ -190,13 +226,15 @@ module dma_rc_logic #(
         end
       end
 
+
       always @(negedge RST_N or posedge CLK) begin
         if (!RST_N) begin
           is_tag_count_exceeded_r[j] <= 1'b0;
         end else  begin
 
-          if(is_rc_sop_r & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s ) begin
-            is_tag_count_exceeded_r[j] <=  (size_tags_s[j] - word_count_tag_r[j]) <= tlp_dwords_s;
+          if(is_rc_sop_r & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s && BUSY_TAGS[j] ) begin
+            if(!(S_AXIS_RC_TLAST && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j])) // Do ee end the operation in one pulse. Do not assert the signal in that case
+              is_tag_count_exceeded_r[j] <=  (size_tags_s[j] - word_count_tag_r[j]) <= tlp_dwords_s;
           end else begin
             is_tag_count_exceeded_r[j]  <= (word_count_tag_r[j] >= size_tags_s[j]);
           end

@@ -79,11 +79,6 @@ create_ip -name fifo_generator -vendor xilinx.com -library ip -module_name user_
 set_property -dict [list CONFIG.INTERFACE_TYPE {AXI_STREAM} CONFIG.TDATA_NUM_BYTES {32} CONFIG.TUSER_WIDTH {0} CONFIG.Enable_TLAST {true} CONFIG.HAS_TKEEP {true} CONFIG.TSTRB_WIDTH {32} CONFIG.TKEEP_WIDTH {32} CONFIG.FIFO_Implementation_wach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wach {15} CONFIG.Empty_Threshold_Assert_Value_wach {14} CONFIG.FIFO_Implementation_wrch {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wrch {15} CONFIG.Empty_Threshold_Assert_Value_wrch {14} CONFIG.FIFO_Implementation_rach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_rach {15} CONFIG.Empty_Threshold_Assert_Value_rach {14}] [get_ips user_fifo]
 create_ip_run [get_files -of_objects [get_fileset sources_1] $project_dir/$project_name/$project_name.srcs/sources_1/ip/user_fifo/user_fifo.xci]
 
-#Benchmarking fifo
-create_ip -name fifo_generator -vendor xilinx.com -library ip -module_name fifo_benchmark
-set_property -dict [list CONFIG.INTERFACE_TYPE {AXI_STREAM} CONFIG.TDATA_NUM_BYTES {32} CONFIG.Enable_TLAST {true}  CONFIG.TUSER_WIDTH {60} CONFIG.HAS_TSTRB {false} CONFIG.HAS_TKEEP {true} CONFIG.Input_Depth_axis {2048} CONFIG.Programmable_Empty_Type_axis {Single_Programmable_Empty_Threshold_Input_Port} CONFIG.Reset_Type {Asynchronous_Reset} CONFIG.Full_Flags_Reset_Value {1} CONFIG.TSTRB_WIDTH {32} CONFIG.TKEEP_WIDTH {32} CONFIG.FIFO_Implementation_wach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wach {15} CONFIG.Empty_Threshold_Assert_Value_wach {14} CONFIG.FIFO_Implementation_wrch {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_wrch {15} CONFIG.Empty_Threshold_Assert_Value_wrch {14} CONFIG.FIFO_Implementation_rach {Common_Clock_Distributed_RAM} CONFIG.Full_Threshold_Assert_Value_rach {15} CONFIG.Empty_Threshold_Assert_Value_rach {14} CONFIG.Full_Threshold_Assert_Value_axis {2047} CONFIG.Empty_Threshold_Assert_Value_axis {2047}] [get_ips fifo_benchmark]
-create_ip_run [get_files -of_objects [get_fileset sources_1] $project_dir/$project_name/$project_name.srcs/sources_1/ip/fifo_benchmark/fifo_benchmark.xci]
-
 
 #### Add files. HDL #### 
 
@@ -108,8 +103,6 @@ launch_run -jobs 4 pcie3_7x_0_synth_1
 wait_on_run pcie3_7x_0_synth_1
 launch_run -jobs 4 user_fifo_synth_1
 wait_on_run user_fifo_synth_1
-launch_run -jobs 4 fifo_benchmark_synth_1
-wait_on_run fifo_benchmark_synth_1
 
 #set_property strategy Performance_Explore [get_runs impl_1]
 set_property strategy Area_Explore [get_runs impl_1]

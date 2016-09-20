@@ -72,7 +72,7 @@ module dma_sriov_top #(
 	parameter C_DATA_WIDTH             = 64      ,
 	parameter C_ENGINE_TABLE_OFFSET    = 32'h200 ,
 	parameter C_OFFSET_BETWEEN_ENGINES = 16'h4000,
-	parameter C_WINDOW_SIZE            = 32      , // Number of parallel memory read requests. Must be a value between 1 and 2**9-1
+	parameter C_WINDOW_SIZE            = 4       , // Number of parallel memory read requests. Must be a value between 1 and 2**9-1
 	parameter C_LOG2_MAX_PAYLOAD       = 8       , // 2**C_LOG2_MAX_PAYLOAD in bytes
 	parameter C_LOG2_MAX_READ_REQUEST  = 12        // 2**C_LOG2_MAX_READ_REQUEST in bytes
 ) (
@@ -203,7 +203,6 @@ module dma_sriov_top #(
 		.S_MEM_IFACE_DIN    (S_MEM_IFACE_DIN                                            ),
 		.S_MEM_IFACE_WE     (S_MEM_IFACE_WE                                             ),
 		.S_MEM_IFACE_ACK    (ack_dma_s                                                  ),
-		.IRQ                (                                                           ),
 		.OPERATION_IN_COURSE(operation_in_course_dma_s                                  )
 	);
 
