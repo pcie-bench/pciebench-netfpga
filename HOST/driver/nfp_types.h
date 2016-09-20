@@ -99,15 +99,21 @@ struct  __attribute__ ((__packed__)) dma_engine {
   u64  reset          : 1;
   u64  is_c2s         : 1;
   u64  is_s2c         : 1;
-  u64  u0             : 60;
+  u64  address_mode   : 2;
+  u64  u0             : 58;
   u16  complete_until_descriptor;
   u16  u1;
-  u32  u3;
+  u32  u2;
   u64  total_time;             //Read: Time that consumed the previous operation. Write: Maximum timeout for a C2S operation
   u64  total_bytes;            //Only read
+
+  u64  host_buffer_size;
+  u64  address_offset;
+  u64  address_inc;
+  u64  number_of_tlps;
   struct dma_descriptor  dma_descriptor[MAX_NUM_DMA_DESCRIPTORS];
 
-  u64 u2[OFFSET_BETWEEN_ENGINES - 4 - MAX_NUM_DMA_DESCRIPTORS * sizeof(struct dma_descriptor) / 8];    // Unused
+  u64 u4[OFFSET_BETWEEN_ENGINES - 4 - MAX_NUM_DMA_DESCRIPTORS * sizeof(struct dma_descriptor) / 8];    // Unused
 };
 
 struct __attribute__ ((__packed__)) dma_common_block {

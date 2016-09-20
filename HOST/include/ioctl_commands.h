@@ -75,13 +75,18 @@ struct dma_buffer {
 */
 struct  dma_descriptor_sw {
   uint64_t address;              /**< [CONTROL] Address of the operation */
+  uint64_t buffer_size;          /**< [CONTROL] Size of the buffer pointed by the address field */
   uint64_t length;               /**< [CONTROL] Length of the operation */
   uint64_t enable       : 1;     /**< [CONTROL] Activate dma engine when this descriptor has been dumped to the NIC */
   uint64_t u1           : 1;     /**< Unused */
   uint64_t is_c2s_op    : 1;     /**< [CONTROL] Is this is an operation from the NIC to the host ? */
   uint64_t is_s2c_op    : 1;     /**< [CONTROL] Is this is an operation from the host to the NIC ? */
-  uint64_t u0           : 60;
+  uint64_t address_mode : 2;     /**< [CONTROL] Is this is an operation from the host to the NIC ? */
+  uint64_t u0           : 58;
+  uint64_t number_of_tlps;
   uint64_t latency;
+  uint64_t address_offset;          /**< [STATUS] Time attending request TLPs*/
+  uint64_t address_inc;          /**< [STATUS] Time attending request TLPs*/
   uint64_t time_at_req;          /**< [STATUS] Time attending request TLPs*/
   uint64_t time_at_comp;         /**< [STATUS] Time attending completion TLPs*/
   uint64_t bytes_at_req;         /**< [STATUS] Bytes involved in request TLPs*/

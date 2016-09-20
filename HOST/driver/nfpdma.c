@@ -65,21 +65,28 @@ u64 writeDMADescriptor (struct dma_descriptor_sw *dd,  struct nfp_card *card)
   struct dma_core *dma = card->dma;
   int i;
   u8 exit_loop = 0;
-  u8 control;
+  u32 control;
 
   // Obtain the IO address
-  phy_addr[dd->index] = (u64) pci_map_single (card->pdev, (u8 *) dd->address, dd->length,  PCI_DMA_BIDIRECTIONAL);
+  phy_addr[dd->index] = (u64) pci_map_single (card->pdev, (u8 *) dd->address, dd->buffer_size,  PCI_DMA_BIDIRECTIONAL);
+
+  // Copy address and size to the FPGA
+  memcpy_toio(&(dma->dma_engine[0].host_buffer_size), &(dd->buffer_size), 8);
+  memcpy_toio(&(dma->dma_engine[0].number_of_tlps), &(dd->number_of_tlps), 8);
+  memcpy_toio(&(dma->dma_engine[0].address_offset), &(dd->address_offset), 8);
+  memcpy_toio(&(dma->dma_engine[0].address_inc), &(dd->address_inc), 8);
 
   // Copy address and size to the FPGA
   memcpy_toio(&(dma->dma_engine[0].dma_descriptor[dd->index].address) , &(phy_addr[dd->index]), 8);
   memcpy_toio(&(dma->dma_engine[0].dma_descriptor[dd->index].size) , &(dd->length), 8);
   phy_addr_valid[dd->index] = 1;
-  phy_size[dd->index] = dd->length;
+  phy_size[dd->index] = dd->buffer_size;
 
   // Copy the direction. Check dma_engine_manager.v to obtain the mapping scpecification
   control = dd->is_c2s_op << 2;
   control += dd->is_s2c_op ? (1 << 3) : 0;
-  memcpy_toio(&(dma->dma_engine[0]) , &(control), 1);
+  control += (dd->address_mode << 4);
+  memcpy_toio(&(dma->dma_engine[0]) , &(control), 4);
 
   // Update the last descriptor count
   ldescriptor = (ldescriptor) % MAX_NUM_DMA_DESCRIPTORS;
@@ -93,7 +100,7 @@ u64 writeDMADescriptor (struct dma_descriptor_sw *dd,  struct nfp_card *card)
   s = getToD();
   // dma->dma_engine[0].enable = 1;
   control |= 1;
-  memcpy_toio(&(dma->dma_engine[0]) , &(control), 1);
+  memcpy_toio(&(dma->dma_engine[0]) , &(control), 4);
 
   do { //Dont stub the cpu. If the OP lasts more than Xs... has the core failed? The time is measured in the FPGA, so we do not
     // loose accuracy.

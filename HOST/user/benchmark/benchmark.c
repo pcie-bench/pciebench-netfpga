@@ -39,6 +39,7 @@
 #include <time.h>
 #include "../middleware/huge_page.h"
 #include "../include/ioctl_commands.h"
+#include <math.h>
 
 #define PAGE_SIZE            4096
 #define MEMORY_READ_BOUNDARY 4096 // Do not touch. According to PCIe spec (section 2.2.7)
@@ -46,7 +47,8 @@
 #define MAX_DMA_DESCRIPTORS  1024
 #define CACHE_SIZE           (16*1024*1024) // 16MB
 #define MAX_READ_REQUEST_SIZE 4096
-#define MAX_PAYLOAD           128
+#define MAX_PAYLOAD           256
+#define DEFAULT_NUMBER_TLPS   512*512
 
 // Comment the following two lines if huge pages are not required
 #define USE_HUGE_PAGES
@@ -54,29 +56,17 @@
 
 //#define NUMBER_PAGES         MAX_PAGES-1 //If using kenel pages, check that this value do NOT exced the one predefined in HOST/include/ioctl_commands.h
 
-// #define BW_TEST
-#ifdef BW_TEST
-#define NUMBER_HW_ITERATIONS         1024
-#else
-#define NUMBER_HW_ITERATIONS         1
-#endif
-
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(*(arr)))
 #endif
 
 static uint64_t large_array[8 * 1024 * 1024];
 
-struct offset_pattern {
-  uint64_t initial_offset;
-  uint64_t offset;
-};
 
 struct fixed_pattern {
   uint64_t initial_offset;
 };
 struct random_pattern {
-  uint64_t initial_offset;
   uint64_t nsystempages;
   uint64_t cachelines;
   uint64_t windowsize;
@@ -86,7 +76,6 @@ struct sequential_pattern {
 
 union properties {
   struct fixed_pattern      pfix;
-  struct offset_pattern     poff;
   struct random_pattern     pran;
   struct sequential_pattern pseq;
 };
@@ -94,8 +83,7 @@ union properties {
 enum pattern {
   FIX, // Fixed: always the same address
   SEQ, // Sequential
-  RAN, // Random
-  OFF  // Offset
+  RAN  // Random
 };
 
 enum direction {
@@ -110,6 +98,11 @@ enum cache {
   WARM
 };
 
+enum test {
+  LATENCY,
+  BANDWIDTH
+};
+
 /**
 * @brief Fields that will be extracted from args.
 */
@@ -117,10 +110,12 @@ struct arguments {
   uint64_t          niters;
   uint64_t          nbytes;
   uint64_t          wsize;
+  uint8_t     test;
   uint8_t           pat;
   uint8_t           dir;
   uint8_t           cache;
   union properties  prop;
+  char*             file_name;
 }; /**< Global variable with the user arguments */
 
 
@@ -132,28 +127,37 @@ struct arguments {
 void printUsage()
 {
   printf ("This program has sveral modes of usage:\n"
-          "· $benchmark -d <DIR> -p <PATTERN> [properties] -n <BYTES> -w <WINDOW_SIZE> -c <CACHE_OPTIONS> -l <NITERS>\n"
+          "· $benchmark -t <TEST_TYPE> -d <DIR> -p <PATTERN> [properties] -n <BYTES> -l <NITERS> [-w <WINDOW_SIZE>]  [-c <CACHE_OPTIONS>] [-f <LOGFILE>]\n"
           "\tWhere \n"
+          "\t\t <TEST_TYPE> can be lat or bw: \n"
+          "\t\t\tlat represents Latency test \n"
+          "\t\t\tbw represents Bandwidth test \n"
           "\t\t <DIR> can be R/W/RW: \n"
           "\t\t\tR represents memory write requests from the FPGA \n"
           "\t\t\tW represents memory read requests from the FPGA \n"
-          "\t\t\tRW represents a memory write request from the FPGA follow by a memory read request\n"
-          "\t\t <PATTERN> can be FIX/SEQ/OFF/RAN for same address,sequential, fixed offset and random tests \n"
-          "\t\t\t- FIX <offset> \n"
-          "\t\t\t- OFF <offset> <unit size>  \n"
-          "\t\t\t- RAN <offset> <window size (multiple of system PAGE_SIZE)>  \n"
+          "\t\t\tRW represents a memory write request from the FPGA that is followed by a memory read request\n"
+          "\t\t <PATTERN> can be FIX/SEQ/RAN for same address,sequential and random access \n"
+          "\t\t\t- FIX <offset>       : Write always to the same address. The offset is referred to the initial position of the software buffer \n"
+          "\t\t\t- SEQ                : Write to contiguous positions of memory\n"
+          "\t\t\t- RAN <window size>  : Write to random 4KB boundaries\n"
+          "\t\t\t\t[WARNING] <window size> must be a power of 2\n"
           "\t\t <BYTES> is a value greater than 0 (necessarily a multiple of 4). Number of bytes per descriptor\n"
-          "\t\t <WINDOW_SIZE> total tags that can be asked simultaneously in memory reads. Min 1, Max 32 \n"
+          "\t\t <NITERS> is the number of iterations of the experiment\n"
+          "\t\t <WINDOW_SIZE> total tags that can be asked simultaneously in memory reads. Min 1, Max 4 \n"
           "\t\t <CACHE_OPTIONS> are: \n"
           "\t\t\t- ignore: Do nothing  \n"
           "\t\t\t- discard: Access in a random way before using the buffer  \n"
           "\t\t\t- warm: Preload in the cache the buffer before accessing to it \n"
-          "\t\t <NITERS> is the number of iterations of the experiment\n"
+          "\t\t <LOGFILE> is the file where the log will be saved \n"
          );
 }
 
 
-
+/**
+ * @brief Auxiliary function that converts a string to an unsigned long. It considers some prefixes such as:G/M/K
+ *
+ * @return An unsigned long derived from the string.
+ */
 static unsigned long int string2bytes(char *s)
 {
   int rmember;
@@ -183,6 +187,7 @@ static unsigned long int string2bytes(char *s)
 *
 * @return A negative value indicates en error.
 */
+char default_file[] = {"/dev/stdout"};
 static int readArguments (int argc, char **argv, struct arguments *arg)
 {
   int i;
@@ -193,19 +198,26 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
 
   memset (arg, 0, sizeof (struct arguments));
   arg->wsize = MAX_WINDOW_SIZE; // Default
+  arg->file_name = default_file;
   for (i = 1; i <= argc - 1; i++) {
-    if (!strcmp (argv[i], "-n")) {
+    if (!strcmp (argv[i], "-t")) {
+      i++;
+      if (strcmp(argv[i], "lat") == 0) {
+        arg->test = LATENCY;
+      } else if (strcmp(argv[i], "bw") == 0) {
+        arg->test = BANDWIDTH;
+      } else {
+        return -1;
+      }
+    } else if (!strcmp (argv[i], "-f")) {
+      i++;
+      arg->file_name = argv[i];
+    } else if (!strcmp (argv[i], "-n")) {
       i++;
       arg->nbytes = string2bytes(argv[i]);
     } else if (!strcmp (argv[i], "-l")) {
       i++;
       arg->niters = string2bytes(argv[i]);
-#ifdef BW_TEST
-      if (arg->niters != 1) {
-        printf("The loopback is applied at hardware level for the bandwidth test of the device to host direction\n");
-        return -1;
-      }
-#endif
     } else if (!strcmp (argv[i], "-w")) {
       i++;
       arg->wsize = string2bytes(argv[i]);
@@ -242,8 +254,6 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
       } else if (strcmp(argv[i], "RAN") == 0) {
         arg->pat = RAN;
         i++;
-        arg->prop.pran.initial_offset = string2bytes(argv[i]);
-        i++;
         arg->prop.pran.nsystempages = (string2bytes(argv[i]) + PAGE_SIZE - 1) / PAGE_SIZE;
         arg->prop.pran.cachelines = string2bytes(argv[i]) / 64;
         arg->prop.pran.windowsize = string2bytes(argv[i]);
@@ -251,12 +261,6 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
           return -1;
         }
         srand(time(NULL));
-      } else if (strcmp(argv[i], "OFF") == 0) {
-        arg->pat = OFF;
-        i++;
-        arg->prop.poff.initial_offset = string2bytes(argv[i]);
-        i++;
-        arg->prop.poff.offset =  string2bytes(argv[i]);
       } else {
         return -1;
       }
@@ -311,12 +315,12 @@ int main(int argc, char **argv)
   int i, j;
   char success;
   uint64_t total_size;
-  uint64_t prev_page = -1;
-  uint64_t page = 0;
-  uint64_t r;
-  uint64_t address;
   uint64_t total_bytes;
-
+  int maximum_size_per_tlp;
+  int n_total_tlps;
+  int n_complete_tlps;
+  int n_incomplete_tlps;
+  FILE* fname;
 
   if (readArguments (argc, argv, &args)) {
     printUsage();
@@ -341,80 +345,106 @@ int main(int argc, char **argv)
     fpgaExit (-1, "Error mapping kernel memory\n");
   }
 
+
+  fname = fopen(args.file_name, "a+");
+
   setWindowSize(args.wsize);
   dlist[0].address = 0;
-  fprintf(stderr, "pattern,descriptor,size,address,time_req_ns,bytes_req,bandwidth_req_gbps,time_comp_ns,bytes_comp,bandwidth_comp_gbps,total_time_ns,total_bytes,bidirectional_bandwidth_gbps\n");
 
+  if (args.test == BANDWIDTH) {
+    fprintf(stderr, "pattern,descriptor,size,bandwidth_gbps\n");
+  } else {
+    fprintf(stderr, "pattern,descriptor,size,latency_ns\n");
+  }
+
+  /* Main loop. Initialize the descriptors, configure the FPGA and gather the information from the descriptors */
   for (i = 0, j = 0; j < args.niters; i++, j++) {
     dlist[i].length        = args.nbytes;
     dlist[i].is_c2s_op     = args.dir == D2H || args.dir == BOTH;
     dlist[i].is_s2c_op     = args.dir == H2D || args.dir == BOTH;
     dlist[i].index         = i;
     dlist[i].enable        = 1;
+    dlist[i].address       = 0; // The addresses are managed by the hardware
+    dlist[i].buffer_size   = total_size;
+    dlist[i].address_offset    = 0;
+    dlist[i].address_inc       = 0;
 
+    if (args.test == BANDWIDTH)
+      dlist[i].number_of_tlps = DEFAULT_NUMBER_TLPS;
+    else {
+      if (args.dir == H2D)
+        dlist[i].number_of_tlps = ceil(dlist[i].length / MAX_READ_REQUEST_SIZE);
+      else if (args.dir == BOTH)
+        dlist[i].number_of_tlps = ceil(dlist[i].length / MAX_PAYLOAD);
+      else {
+        fprintf(stderr, "[ERROR] No Latency test available\n");
+        return -1;
+      }
+    }
+    success = 1;
+
+    /*
+      Given the number of total TLPs compute the number of complete and incomplete TLPs in a concrete transference.
+      Useful for the bandwidth computation
+    */
+    maximum_size_per_tlp = args.dir == D2H || args.dir == BOTH ? MAX_PAYLOAD : MAX_READ_REQUEST_SIZE;
+    n_total_tlps      = dlist[i].number_of_tlps;
+    n_complete_tlps   = args.nbytes / maximum_size_per_tlp;
+    n_incomplete_tlps = args.nbytes != maximum_size_per_tlp * n_complete_tlps ? 1 : 0;
+
+
+    if (dlist[i].length >= dlist[i].buffer_size) {
+      fprintf(fname, "[ERROR] The request size is greater than the buffer size\n");
+      success = 0;
+    }
     switch (args.pat) {
     case FIX:
-      dlist[i].address       = args.prop.pfix.initial_offset; // No offset but we can specify the initial
-      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
-                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
-      break;
-    case OFF:
-      dlist[i].address       = i * args.prop.poff.offset + args.prop.poff.initial_offset;         // Fixed offset + initial unalignment
-      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
-                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
+      dlist[i].address_mode   = 0;
+      dlist[i].address_offset = args.prop.pfix.initial_offset;
+      if (args.prop.pfix.initial_offset / PAGE_SIZE != (args.prop.pfix.initial_offset + dlist[i].length) / 4096 && args.prop.pfix.initial_offset != 0) {
+        fprintf(fname, "[ERROR] The request is not contained in one system page. This violates the specification\n"); // The condition is too restrictive.
+        success = 0;
+      } else {
+        fprintf(fname, "FIX,");
+      }
       break;
     case SEQ:
-      dlist[i].address       = i * args.nbytes;                 // Sequential
-      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
-                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
+      dlist[i].address_mode   = 1;
+      dlist[i].address_offset = 0;
+
+      if (dlist[i].length * dlist[i].number_of_tlps >= dlist[i].buffer_size) {
+        fprintf(fname, "[ERROR] The number of requested TLPs will exceed the buffer size\n");
+        success = 0;
+      } else {
+        fprintf(fname, "SEQ,");
+      }
       break;
     case RAN:
-      while (1) {
-        r = rand();
-        address = (r % args.prop.pran.cachelines) * 64;
-        address %= args.prop.pran.windowsize;
-
-        page = address / PAGE_SIZE;
-
-        if (args.prop.pran.nsystempages == 1 || page != prev_page) {
-          prev_page = page;
-          break;
-        }
-      }
-
-      dlist[i].address = address;
-
-      success = !((((args.nbytes - 1) % MEMORY_READ_BOUNDARY + dlist[i].address) / MEMORY_READ_BOUNDARY != (dlist[i].address) / MEMORY_READ_BOUNDARY)
-                  || (args.nbytes % MEMORY_READ_BOUNDARY == 0 && dlist[i].address % MEMORY_READ_BOUNDARY != 0)); // End of boundary reached
+      dlist[i].address_mode   = 3;
+      dlist[i].address_offset = 0;
+      dlist[i].address_inc    = args.prop.pran.cachelines;
+      dlist[i].buffer_size    = args.prop.pran.windowsize;
+      fprintf(fname, "RAN,");
       break;
     default:
-      fprintf(stderr, "Pattern not implemented\n");
+      fprintf(fname, "Pattern not implemented\n");
       success = 0;
       break;
     }
 
+    uint64_t check_limit = 1;
+    while (check_limit < dlist[i].buffer_size) {
+      check_limit *= 2;
+    }
+    if (check_limit != dlist[i].buffer_size) {
+      fprintf(fname, "[ERROR] The buffer size must be a power of 2\n");
+      success = 0;
+    }
+
     if (!success) {
-      //fprintf(stderr, "An error was detected\n"); // Just ignore that combination of address-size
-      i--;
+      fprintf(stderr, "An error was detected\n");
+      break;
     } else {
-      switch (args.pat) {
-      case FIX:
-        fprintf(stderr, "FIX,");
-        break;
-      case OFF:
-        fprintf(stderr, "OFF,");
-        break;
-      case SEQ:
-        fprintf(stderr, "SEQ,");
-        break;
-      case RAN:
-        fprintf(stderr, "RAN,");
-        break;
-      default:
-        fprintf(stderr, "Pattern not implemented\n");
-        success = 0;
-        break;
-      }
       switch (args.cache) {
       case WARM:
         if (args.pat != RAN) {
@@ -425,32 +455,36 @@ int main(int argc, char **argv)
         thrash_cache();
         break;
       }
-      total_bytes = NUMBER_HW_ITERATIONS * args.nbytes;
-      fprintf(stderr, "%d,%ld,%ld", i, args.nbytes, dlist[i].address );
+
+      fprintf(fname, "%d,%ld", i, args.nbytes);
       writeDescriptor(&(dlist[i]));
       dlist[i].index = (dlist[i].index + 1) % MAX_DMA_DESCRIPTORS;
       readDescriptor(&(dlist[i]));
 
-      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is we warmed up
+      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is warmed up
         if (args.pat == RAN) {
           warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
         }
       }
 
-      //fprintf(stderr, "waiting....");
-      //getchar();
-      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_req * 4, dlist[i].bytes_at_req * 4, dlist[i].time_at_req ? total_bytes * 8.0 / (dlist[i].time_at_req * 4) : 0);
-      fprintf(stderr, ",%ld,%ld,%lf", dlist[i].time_at_comp * 4, dlist[i].bytes_at_comp * 4, dlist[i].time_at_comp ? total_bytes * 8.0 / (dlist[i].time_at_comp * 4) : 0);
-      fprintf(stderr, ",%ld,%ld,%lf\n", dlist[i].latency * 4,   (dlist[i].bytes_at_comp + dlist[i].bytes_at_req) * 4, (total_bytes) * 8.0 / (dlist[i].latency * 4));
+
+      total_bytes = n_total_tlps / (n_complete_tlps + n_incomplete_tlps) * args.nbytes + (n_total_tlps % (n_complete_tlps + n_incomplete_tlps)) * maximum_size_per_tlp;
+
+      if (args.test == BANDWIDTH) {
+        fprintf(fname, ",%lf\n", (total_bytes) * 8.0 / (dlist[i].latency * 4));
+      } else {
+        fprintf(fname, ",%ld\n", dlist[i].time_at_comp * 4);
+      }
     }
   }
-  // Free the memory
+  fclose(fname);
+// Free the memory
 #ifdef USE_HUGE_PAGES
   unsetHugeFreePages(pmem, NUMBER_PAGES );
 #else
   unsetFreePages(pmem, NUMBER_PAGES );
 #endif
-  // Free FPGA resources
+// Free FPGA resources
   fpgaExit (0, "");
   return 0;
 }
