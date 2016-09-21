@@ -163,7 +163,7 @@ module dma_logic #(
 		.C_ADDR_WIDTH         (C_ADDR_WIDTH         ),
 		.C_DATA_WIDTH         (C_DATA_WIDTH         ),
 		.C_ENGINE_TABLE_OFFSET(C_ENGINE_TABLE_OFFSET),
-		.C_DEFAULT_WINDOW_SIZE(4                    )
+		.C_DEFAULT_WINDOW_SIZE(C_WINDOW_SIZE        )
 	) dma_engine_manager_i (
 		.CLK               (CLK                       ),
 		.RST_N             (dma_reset_n               ),

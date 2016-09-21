@@ -702,10 +702,12 @@ module dma_rq_logic #(
 
 
 
-  assign M_AXIS_RQ_TDATA   = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? axis_rq_tdata_after_comp_s : axis_rq_tdata_r;
-  assign M_AXIS_RQ_TVALID  = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? 1'b1 : axis_rq_tvalid_r;
+  assign M_AXIS_RQ_TDATA   = axis_rq_tdata_r;
+  assign M_AXIS_RQ_TVALID  = axis_rq_tvalid_r;
+//  assign M_AXIS_RQ_TVALID = axis_rq_tvalid_r;
   assign M_AXIS_RQ_TUSER  = {52'h0, last_be_r, first_be_r};
-  assign M_AXIS_RQ_TLAST  = END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r  && M_AXIS_RQ_TREADY && wr_state == INIT_READ ? 1'b1 : axis_rq_tlast_r;
+
+  assign M_AXIS_RQ_TLAST  = axis_rq_tlast_r;
   assign M_AXIS_RQ_TKEEP  = axis_rq_tkeep_r;
 
   assign axis_rq_tdata_after_comp_s = { axis_rq_tdata_r[255:128], axis_rq_tdata_r[127:104], LAST_TAG, axis_rq_tdata_r[95:64], axis_rq_tdata_r[63:0]};
@@ -1119,7 +1121,8 @@ module dma_rq_logic #(
   endfunction
 
   generate for  (j=0; j<C_WINDOW_SIZE; j=j+1) begin
-      assign current_tags_s[j] = COMPLETED_TAGS[j] && !axis_rq_tvalid_r ? 1'b0 : current_tags_r[j];
+
+      assign current_tags_s[j] = /*COMPLETED_TAGS[j] && !axis_rq_tvalid_r ? 1'b0 : */ current_tags_r[j];
 
       if(j==0) begin
         always @(negedge RST_N or posedge CLK) begin
@@ -1127,9 +1130,9 @@ module dma_rq_logic #(
             current_tags_r[j] <= 0;
             size_tags_r[j] <= 0;
           end else begin
-            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 )|| (END_OF_TAG && COMPLETED_TAGS&& !axis_rq_tvalid_r ))) begin
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 )/*|| (END_OF_TAG && COMPLETED_TAGS&& !axis_rq_tvalid_r && LAST_TAG==0 )*/)) begin
               current_tags_r[j] <= 1'b1;
-              size_tags_r[j] <= current_tags_r[j] ?  size_tags_r[j] : current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
+              size_tags_r[j] <= /*current_tags_r[j] ?  size_tags_r[j] :*/ current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
             end else begin
               current_tags_r[j] <= current_tags_r[j] & !COMPLETED_TAGS[j];
             end
@@ -1141,11 +1144,11 @@ module dma_rq_logic #(
             current_tags_r[j] <= 0;
             size_tags_r[j] <= 0;
           end else begin
-            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 && current_tags_s[0+:j]=={j{1'b1}})|| (END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r ))) begin
-              current_tags_r[j] <= 1'b1; //!COMPLETED_TAGS[j]; //1'b1;
-              size_tags_r[j] <= current_tags_r[j] ?  size_tags_r[j] : current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
+            if(wr_state == INIT_READ && M_AXIS_RQ_TREADY &&  j<CURRENT_WINDOW_SIZE[7:0] && ((j<CURRENT_WINDOW_SIZE[7:0] && current_tags_s[j] == 1'b0 && current_tags_s[0+:j]=={j{1'b1}})/*|| (END_OF_TAG && COMPLETED_TAGS && !axis_rq_tvalid_r && LAST_TAG==j )*/)) begin
+              current_tags_r[j] <= 1'b1; 
+              size_tags_r[j] <= /*current_tags_r[j] ?  size_tags_r[j] :*/ current_rd_tlp_words_s[10:0]; //How many bytes are we waiting?
             end else begin
-              current_tags_r[j] <= current_tags_r[j] & !COMPLETED_TAGS[j];
+              current_tags_r[j] <= (current_tags_r[j] && !COMPLETED_TAGS[j]) || (j>=CURRENT_WINDOW_SIZE[7:0]);
             end
           end
         end
@@ -1189,7 +1192,7 @@ module dma_rq_logic #(
 
 
   generate for  (j=0; j<C_WINDOW_SIZE; j=j+1) begin
-      assign latency_tags_s[j] = COMPLETED_TAGS[j] && !axis_rq_tvalid_r ? END_OF_TAG && COMPLETED_TAGS  && M_AXIS_RQ_TREADY && wr_state == INIT_READ : latency_tags_r[j];
+      assign latency_tags_s[j] = latency_tags_r[j];
 
       if(j==0) begin
         always @(negedge RST_N or posedge CLK) begin

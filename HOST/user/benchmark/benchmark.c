@@ -42,8 +42,7 @@
 #include <math.h>
 
 #define PAGE_SIZE            4096
-#define MEMORY_READ_BOUNDARY 4096 // Do not touch. According to PCIe spec (section 2.2.7)
-#define MAX_WINDOW_SIZE      32
+#define MAX_WINDOW_SIZE      4
 #define MAX_DMA_DESCRIPTORS  1024
 #define CACHE_SIZE           (16*1024*1024) // 16MB
 #define MAX_READ_REQUEST_SIZE 4096

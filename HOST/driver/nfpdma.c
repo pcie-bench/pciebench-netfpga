@@ -55,7 +55,8 @@ u8  phy_addr_valid[MAX_NUM_DMA_DESCRIPTORS] = {0};
 void dma_set_window_size(u64 ws, struct nfp_card *card)
 {
   struct dma_core *dma = card->dma;
-  dma->dma_engine[0].total_bytes = ws;
+  memcpy_toio(&(dma->dma_engine[0].total_bytes), &(ws), 8);
+
   return;
 }
 

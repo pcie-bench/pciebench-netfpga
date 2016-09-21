@@ -123,7 +123,7 @@ module dma_rc_logic #(
       is_rc_sop_r <= 1'b1;
     end else  begin
       if(S_AXIS_RC_TLAST && S_AXIS_RC_TVALID && S_AXIS_RC_TREADY) begin
-        is_rc_sop_r <= 1'b1;  // Select the dout from the dma component
+        is_rc_sop_r <= 1'b1;  
       end else if( S_AXIS_RC_TVALID && S_AXIS_RC_TREADY ) begin
         is_rc_sop_r <= 1'b0;  // Else msix
       end else begin
@@ -186,9 +186,9 @@ module dma_rc_logic #(
         if(!RST_N) begin
           completed_tags_r[j] <= 1'b0;
         end else begin
-          completed_tags_r[j] <= BUSY_TAGS[j] && (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && S_AXIS_RC_TLAST )
+          completed_tags_r[j] <=  !COMPLETED_TAGS[j] && BUSY_TAGS[j] && (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && S_AXIS_RC_TLAST )
               && ((is_tag_count_exceeded_r[j]) // We exceed the requested size. Take into account completions in one pulse
-                || (j==tlp_tag_s && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]));
+                || (is_rc_sop_r && j==tlp_tag_s && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]));
         end
       end      
   end
@@ -199,12 +199,12 @@ module dma_rc_logic #(
         if (!RST_N) begin
           word_count_tag_r[j] <= 0;
         end else  begin
-          if(is_rc_sop_r & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s ) begin
+          if(is_rc_sop_r && S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s ) begin
            // if (COMPLETED_TAGS[j]) begin
             if(S_AXIS_RC_TLAST && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]) begin
               word_count_tag_r[j] <= 0;
-            end else begin
-              word_count_tag_r[j] <= word_count_tag_r[j] + tlp_dwords_s;
+            end else begin 
+              word_count_tag_r[j] <= COMPLETED_TAGS[j] ? 'h0 : word_count_tag_r[j] + tlp_dwords_s;
             end
           end else begin
             if (COMPLETED_TAGS[j])
@@ -233,10 +233,11 @@ module dma_rc_logic #(
         end else  begin
 
           if(is_rc_sop_r & S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && j==tlp_tag_s && BUSY_TAGS[j] ) begin
-            if(!(S_AXIS_RC_TLAST && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j])) // Do ee end the operation in one pulse. Do not assert the signal in that case
-              is_tag_count_exceeded_r[j] <=  (size_tags_s[j] - word_count_tag_r[j]) <= tlp_dwords_s;
+            if(!(S_AXIS_RC_TLAST && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j])) begin // Do we end the operation in one pulse? Do not assert the signal in that case
+              is_tag_count_exceeded_r[j] <=  ((size_tags_s[j] - word_count_tag_r[j]) <= tlp_dwords_s);
+            end 
           end else begin
-            is_tag_count_exceeded_r[j]  <= (word_count_tag_r[j] >= size_tags_s[j]);
+            is_tag_count_exceeded_r[j]  <= !COMPLETED_TAGS[j] && (word_count_tag_r[j] >= size_tags_s[j]);
           end
 
         end

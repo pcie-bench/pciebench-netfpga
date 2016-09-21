@@ -247,6 +247,8 @@ module pcie_controller (
   
   assign m_axis_rc_tready = m_axis_rc_treadyarray[0];
   assign s_axis_rq_treadybit = s_axis_rq_tready && pcie_tfc_nph_av > 2'b01 && pcie_tfc_npd_av > 2'b01; // At least 1 credit.
+  wire s_axis_rq_tvalid_aux;
+  assign s_axis_rq_tvalid = s_axis_rq_tvalid_aux & s_axis_rq_treadybit;
   dma_sriov_top #(
     .C_LOG2_MAX_PAYLOAD(8),      //256
     .C_LOG2_MAX_READ_REQUEST(12) //4096      
@@ -258,7 +260,7 @@ module pcie_controller (
     .M_AXIS_RQ_TUSER                (s_axis_rq_tuser),
     .M_AXIS_RQ_TLAST                (s_axis_rq_tlast),
     .M_AXIS_RQ_TKEEP                (s_axis_rq_tkeep),
-    .M_AXIS_RQ_TVALID               (s_axis_rq_tvalid),
+    .M_AXIS_RQ_TVALID               (s_axis_rq_tvalid_aux),
     .M_AXIS_RQ_TREADY               ({4{s_axis_rq_treadybit}}),
 
     .S_AXIS_RC_TDATA                (m_axis_rc_tdata),

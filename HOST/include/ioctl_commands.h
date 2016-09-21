@@ -91,7 +91,7 @@ struct  dma_descriptor_sw {
   uint64_t time_at_comp;         /**< [STATUS] Time attending completion TLPs*/
   uint64_t bytes_at_req;         /**< [STATUS] Bytes involved in request TLPs*/
   uint64_t bytes_at_comp;        /**< [STATUS] Bytes involved in completion TLPs*/
-  uint64_t  index;               /**< [CONTROL] Index of the descriptor to update/retrieve information */
+  uint64_t index;                /**< [CONTROL] Index of the descriptor to update/retrieve information */
 };
 
 /* IOCTL operations */
@@ -117,6 +117,6 @@ struct  dma_descriptor_sw {
 
 #define NFPIOC_WINDOW_SIZE _IOR(IOCTL_MAGIC_NUMBER, 7,uint64_t)  /**< Set the concurrent number of tags in reception. */
 
-#define IOC_MAXNR 6 /**< Total number of IOCTL operations. */
+#define IOC_MAXNR 7 /**< Total number of IOCTL operations. */
 
 #endif
