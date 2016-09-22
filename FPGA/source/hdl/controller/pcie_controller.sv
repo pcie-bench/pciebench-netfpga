@@ -251,7 +251,7 @@ module pcie_controller (
   assign s_axis_rq_tvalid = s_axis_rq_tvalid_aux & s_axis_rq_treadybit;
   dma_sriov_top #(
     .C_LOG2_MAX_PAYLOAD(8),        //256
-    .C_LOG2_MAX_READ_REQUEST(12),  //4096
+    .C_LOG2_MAX_READ_REQUEST(9),   //512 
     .C_WINDOW_SIZE(24)     
   ) dma_sriov_top_i (
     .CLK                            (pcie_clk),
