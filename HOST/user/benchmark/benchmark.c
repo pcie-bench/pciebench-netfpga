@@ -42,7 +42,7 @@
 #include <math.h>
 
 #define PAGE_SIZE            4096
-#define MAX_WINDOW_SIZE      4
+#define MAX_WINDOW_SIZE      24
 #define MAX_DMA_DESCRIPTORS  1024
 #define CACHE_SIZE           (16*1024*1024) // 16MB
 #define MAX_READ_REQUEST_SIZE 4096
@@ -142,7 +142,7 @@ void printUsage()
           "\t\t\t\t[WARNING] <window size> must be a power of 2\n"
           "\t\t <BYTES> is a value greater than 0 (necessarily a multiple of 4). Number of bytes per descriptor\n"
           "\t\t <NITERS> is the number of iterations of the experiment\n"
-          "\t\t <WINDOW_SIZE> total tags that can be asked simultaneously in memory reads. Min 1, Max 4 \n"
+          "\t\t <WINDOW_SIZE> total tags that can be asked simultaneously in memory reads. Min 1, Max 24 \n"
           "\t\t <CACHE_OPTIONS> are: \n"
           "\t\t\t- ignore: Do nothing  \n"
           "\t\t\t- discard: Access in a random way before using the buffer  \n"

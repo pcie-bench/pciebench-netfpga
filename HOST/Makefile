@@ -37,8 +37,8 @@ ARCHIVE_SUFFIX=$(shell date "+%Y_%m_%d")
 ARCHIVE=$(ARCHIVE_PREFIX)-$(ARCHIVE_SUFFIX)
 
 #Use _GNU_SOURCE for O_DIRECT flag
-CXXFLAGS += -Wall -pthread   -D_GNU_SOURCE  -g
-COPTFLAGS =  # -O3
+CXXFLAGS += -Wall -pthread   -D_GNU_SOURCE # -g
+COPTFLAGS =   -O3
 
 SRC = middleware/init.c middleware/debug.c middleware/huge_page.c middleware/transfer.c  #List of all .c of the user example.
 INC = middleware/init.h middleware/debug.h  middleware/huge_page.h middleware/transfer.h  #List of all .h
