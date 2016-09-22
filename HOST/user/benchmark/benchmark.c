@@ -191,7 +191,7 @@ static int readArguments (int argc, char **argv, struct arguments *arg)
 {
   int i;
 
-  if (argc < 2 || argc > 16) {
+  if (argc < 2 || argc > 18) {
     return -1;
   }
 
