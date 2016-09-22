@@ -444,10 +444,13 @@ int main(int argc, char **argv)
       fprintf(stderr, "An error was detected\n");
       break;
     } else {
+      fprintf(fname, "%d,%ld", i, args.nbytes);
       switch (args.cache) {
       case WARM:
         if (args.pat != RAN) {
           warm_cache((uint64_t *)((uint8_t *)pmem + (uint64_t)((dlist[i].address >> 2) << 2)), args.nbytes);
+        } else {
+          warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
         }
         break;
       case DISCARD:
@@ -455,16 +458,11 @@ int main(int argc, char **argv)
         break;
       }
 
-      fprintf(fname, "%d,%ld", i, args.nbytes);
+
       writeDescriptor(&(dlist[i]));
       dlist[i].index = (dlist[i].index + 1) % MAX_DMA_DESCRIPTORS;
       readDescriptor(&(dlist[i]));
 
-      if (args.cache == WARM) { // Give some time to the system to populate the cache memory. In this case, all the window is warmed up
-        if (args.pat == RAN) {
-          warm_cache((uint64_t *)((uint8_t *)pmem), args.prop.pran.windowsize);
-        }
-      }
 
 
       total_bytes = n_total_tlps / (n_complete_tlps + n_incomplete_tlps) * args.nbytes + (n_total_tlps % (n_complete_tlps + n_incomplete_tlps)) * maximum_size_per_tlp;
