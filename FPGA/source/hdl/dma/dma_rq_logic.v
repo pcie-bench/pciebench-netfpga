@@ -257,6 +257,8 @@ module dma_rq_logic #(
   reg [C_WINDOW_SIZE-1:0] window_size_mask_r;
   reg [              7:0] window_size_r     ;
 
+  reg [31:0] mem_wr_number_even_tlp_r;
+  reg [31:0] mem_rd_number_even_tlp_r;
   wire last_word_at_tlp_s     ;
   wire last_two_words_at_tlp_s;
   wire one_word_at_buffer_s   ;
@@ -286,8 +288,6 @@ module dma_rq_logic #(
   reg  [63:0] next_tx_seq_rd_addr_r;
   reg  [63:0] tx_fix_wr_addr_r;
   reg  [63:0] tx_fix_rd_addr_r;
-  reg  [63:0] tx_off_wr_addr_r;
-  reg  [63:0] tx_off_rd_addr_r;
   reg  [63:0] tx_rand_wr_addr_r;
   reg  [63:0] tx_rand_rd_addr_r;
   reg         tx_addr_state_r ;
@@ -316,8 +316,17 @@ module dma_rq_logic #(
   reg [63:0] next_random_address_candidate_r;
   reg [63:0] next_random_address_candidate_plus_1_r;
   reg [63:0] next_random_address_wr_r;
+  reg [63:0] next_random_address_wr_non_truncated_r;
+  reg [63:0] next_random_page_wr_non_truncated_r;
+  reg [63:0] next_random_page_rd_non_truncated_r;
   reg [63:0] next_random_address_rd_r;
-
+  reg [63:0] next_random_address_rd_non_truncated_r;
+  reg [11:0] block_in_boundary_r;
+  reg [11:0] block_in_boundary_minus_1_r;
+  reg  [4:0] clog_block_in_boundary_r;
+  reg [11:0] next_wr_offset_in_window_r;
+  reg [11:0] next_rd_offset_in_window_r;
+  reg [63:0] size_at_descriptor_r;
   always @(negedge RST_N or posedge CLK) begin
     if(!RST_N) begin
       random_number_r <= 1;
@@ -326,20 +335,48 @@ module dma_rq_logic #(
       next_random_address_candidate_plus_1_r <= 0;
       next_random_address_wr_r <= 0;
       next_random_address_rd_r <= 0;
+      next_random_address_wr_non_truncated_r <= 0;
+      next_random_address_rd_non_truncated_r <= 0;
+      block_in_boundary_r <= 0;
+      clog_block_in_boundary_r <= 0;
+      next_wr_offset_in_window_r <= 0;
+      next_rd_offset_in_window_r <= 0;
+      next_random_page_wr_non_truncated_r <= 0;
+      next_random_page_rd_non_truncated_r <= 0;
+      size_at_descriptor_r <= 0;
+      block_in_boundary_minus_1_r <= 0;
     end else begin
+      // Step 1) Generate a random pseudo random number
       random_number_r <= { random_number_r[29:0], random_number_r[30] ^ random_number_r[27] };
-      next_random_address_candidate_r <= random_number_modulus_r;
-      next_random_address_candidate_plus_1_r <= next_random_address_candidate_r+4096;
+      // Step 2) Truncate the value to the size of the buffer at the host
+      random_number_modulus_r                <= random_number_r&(SIZE_AT_HOST-1);
+      // Step 3) We compute two possible values, the number in 2) and the number in 2) plus 4KB
+      next_random_address_candidate_r        <= random_number_modulus_r;
+      next_random_address_candidate_plus_1_r <= random_number_modulus_r+4096;
 
-      next_random_address_wr_r  <=  next_random_address_candidate_r[63:12]!=tx_rand_wr_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
-      next_random_address_rd_r  <=  next_random_address_candidate_r[63:12]!=tx_rand_rd_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
+      // Step 4) We check if the page referenced by 2) is the same that the final output. If this is the case, use 2)+4096
+      next_random_page_wr_non_truncated_r <= next_random_address_candidate_r[63:12]!=tx_rand_wr_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
+      next_random_page_rd_non_truncated_r <= next_random_address_candidate_r[63:12]!=tx_rand_rd_addr_r[63:12] ? {next_random_address_candidate_r[63:12], 12'h0} : {next_random_address_candidate_plus_1_r[63:12], 12'h0};
 
-      random_number_modulus_r <= random_number_r&(SIZE_AT_HOST-1);
-    //  random_number_modulus_r <= ((SIZE_AT_HOST  *  random_number_r)>>31); // We generates number in the range 2**0 to 2**31. [2**0, 2**31]
-    //                                                                       // We transform this value to the range [0,1] dividing by 2**31 -> ">>31"
-    //                                                                       // We multiply by the buffer size at the host side
+      // Step 5) Use the new address at 4)
+      next_random_address_wr_non_truncated_r  <=  {next_random_page_wr_non_truncated_r[63:12], next_wr_offset_in_window_r[11:0]};
+      next_random_address_rd_non_truncated_r  <=  {next_random_page_rd_non_truncated_r[63:12], next_rd_offset_in_window_r[11:0]};
+
+      // Step 6) Be careful because 2) plus 4KB may exceed the size of the buffer
+      next_random_address_wr_r <= next_random_address_wr_non_truncated_r &(SIZE_AT_HOST-1); 
+      next_random_address_rd_r <= next_random_address_rd_non_truncated_r &(SIZE_AT_HOST-1);  
+
+      // Step 1*) Compute the offset inside a 4KB window, first step: compute the clog2
+      size_at_descriptor_r <= SIZE_AT_DESCRIPTOR;
+      clog_block_in_boundary_r <= `CLOG2(size_at_descriptor_r);
+      // Step 2*) Compute the real value of the clog2
+      block_in_boundary_r <= (1<<clog_block_in_boundary_r);
+      block_in_boundary_minus_1_r <= (1<<clog_block_in_boundary_r)-1; //block_in_boundary_r-1;
+      // Step 3*) Given a random number, use the most significant bits to reference the inner block. RANDOM_NUMBER AND complement(SIZE-1)
+      next_wr_offset_in_window_r <= SIZE_AT_DESCRIPTOR ? random_number_r[11:0] & ~(block_in_boundary_minus_1_r) : 0;
+      next_rd_offset_in_window_r <= SIZE_AT_DESCRIPTOR ? random_number_r[11:0] & ~(block_in_boundary_minus_1_r) : 0;
     end
-  end  
+  end    
 
   reg [63:0] initial_wr_seq_page_r;
   reg [63:0] initial_rd_seq_page_r;
@@ -347,43 +384,43 @@ module dma_rq_logic #(
     if(!RST_N) begin
       tx_seq_wr_addr_r <= 64'b0;
       tx_rand_wr_addr_r <= 64'h0;
-      tx_off_wr_addr_r <= 64'h0;
       initial_wr_seq_page_r <= 64'h0;
       next_tx_seq_wr_addr_r <= 64'h0;
     end else begin
       case(wr_state)
         IDLE : begin
-          if (M_AXIS_RQ_TREADY) begin
+          if (M_AXIS_RQ_TREADY && capabilities_s[0] && ENGINE_VALID && !end_of_operation_r  && !end_of_operation) begin
             initial_wr_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
             tx_seq_wr_addr_r      <= ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR;
             next_tx_seq_wr_addr_r <= ADDR_AT_DESCRIPTOR + (SIZE_AT_DESCRIPTOR<<1);
             tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_wr_r;
-            tx_off_wr_addr_r  <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_INCR;
+          end else begin
+            initial_wr_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
+            tx_seq_wr_addr_r      <= ADDR_AT_DESCRIPTOR;
+            next_tx_seq_wr_addr_r <= ADDR_AT_DESCRIPTOR+ SIZE_AT_DESCRIPTOR;
+            tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_wr_r;
           end
         end
         INIT_WRITE : begin
-          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s) begin
+          if(M_AXIS_RQ_TREADY && one_word_at_buffer_s && last_word_at_tlp_s && mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
             tx_seq_wr_addr_r      <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_wr_addr_r;
             next_tx_seq_wr_addr_r <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR;
 
             tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_wr_r; // Write to the initial bytes of a system page
-            tx_off_wr_addr_r  <= tx_off_wr_addr_r + ADDRESS_GEN_INCR;
           end
         end
         WRITE : begin
-          if(M_AXIS_RQ_TREADY) begin
+          if(M_AXIS_RQ_TREADY && mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r  && mem_wr_number_even_tlp_r == mem_wr_current_tlp_modulus_r) begin
             if((two_words_at_buffer_s && last_two_words_at_tlp_s) || (one_word_at_buffer_s && last_word_at_tlp_s)) begin
               tx_seq_wr_addr_r      <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_wr_addr_r;
               next_tx_seq_wr_addr_r <= (next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_wr_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_wr_addr_r + SIZE_AT_DESCRIPTOR;
               tx_rand_wr_addr_r <= ADDR_AT_DESCRIPTOR  + next_random_address_wr_r;
-              tx_off_wr_addr_r <= tx_off_wr_addr_r + ADDRESS_GEN_INCR;
             end
           end
         end
         default : begin
           tx_seq_wr_addr_r <= tx_seq_wr_addr_r;
           tx_rand_wr_addr_r <= tx_rand_wr_addr_r;
-          tx_off_wr_addr_r <= tx_off_wr_addr_r;
         end
       endcase
     end
@@ -393,34 +430,35 @@ module dma_rq_logic #(
     if(!RST_N) begin
       tx_seq_rd_addr_r <= 64'b0;
       tx_rand_rd_addr_r <= 64'h0;
-      tx_off_rd_addr_r <= 64'h0;
       initial_rd_seq_page_r <= 64'h0;
       next_tx_seq_rd_addr_r <= 64'h0;
     end else begin
       case(wr_state)
         IDLE : begin
-          if (M_AXIS_RQ_TREADY) begin
+          if (M_AXIS_RQ_TREADY && capabilities_s[1] && ENGINE_VALID && !end_of_operation_r  && !end_of_operation) begin
 
             initial_rd_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
             next_tx_seq_rd_addr_r <= ADDR_AT_DESCRIPTOR + (SIZE_AT_DESCRIPTOR<<1);            
             tx_seq_rd_addr_r  <= ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR;
             tx_rand_rd_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_rd_r;
-            tx_off_rd_addr_r  <= ADDR_AT_DESCRIPTOR + ADDRESS_GEN_INCR;
+          end else begin
+            initial_rd_seq_page_r <= ADDR_AT_DESCRIPTOR>>12;
+            next_tx_seq_rd_addr_r <= ADDR_AT_DESCRIPTOR+ SIZE_AT_DESCRIPTOR;            
+            tx_seq_rd_addr_r  <= ADDR_AT_DESCRIPTOR;
+            tx_rand_rd_addr_r <= ADDR_AT_DESCRIPTOR + next_random_address_rd_r;
           end
         end
         INIT_READ : begin
-          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r /*&& !(axis_rq_tvalid_r && COMPLETED_TAGS)*/) begin
             tx_seq_rd_addr_r      <= (next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_rd_seq_page_r ? ADDR_AT_DESCRIPTOR : next_tx_seq_rd_addr_r;
             next_tx_seq_rd_addr_r <= (next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR)>>12 !=  initial_rd_seq_page_r ? ADDR_AT_DESCRIPTOR + SIZE_AT_DESCRIPTOR: next_tx_seq_rd_addr_r + SIZE_AT_DESCRIPTOR;            
           
             tx_rand_rd_addr_r <= ADDR_AT_DESCRIPTOR  + next_random_address_rd_r;
-            tx_off_rd_addr_r  <= tx_off_rd_addr_r + ADDRESS_GEN_INCR;
           end
         end
         default : begin
           tx_seq_rd_addr_r  <= tx_seq_rd_addr_r;
           tx_rand_rd_addr_r <= tx_rand_rd_addr_r;
-          tx_off_rd_addr_r <= tx_off_rd_addr_r;
         end
       endcase
     end
@@ -447,8 +485,6 @@ module dma_rq_logic #(
   reg [31:0] mem_rd_total_tlp_r      ;
   reg [31:0] mem_wr_odd_tlp_words_r  ;
   reg [31:0] mem_rd_odd_tlp_words_r  ;
-  reg [31:0] mem_wr_number_even_tlp_r;
-  reg [31:0] mem_rd_number_even_tlp_r;
 
   always @(negedge RST_N or posedge CLK) begin
     if (!RST_N) begin
@@ -558,7 +594,7 @@ module dma_rq_logic #(
           end
         end
         INIT_READ : begin
-          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY /*&& !(axis_rq_tvalid_r && COMPLETED_TAGS)*/) begin
             mem_rd_current_tlp_r         <= mem_rd_current_tlp_r+1;
             mem_rd_current_tlp_modulus_r <= mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r ? 32'h1 : mem_rd_current_tlp_modulus_r+1;
           end
@@ -629,7 +665,7 @@ module dma_rq_logic #(
           end
         end
         INIT_READ : begin
-          if(M_AXIS_RQ_TREADY && (current_tags_s & window_size_mask_r)!=window_size_mask_r && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+          if(M_AXIS_RQ_TREADY && (current_tags_s & window_size_mask_r)!=window_size_mask_r /*&& !(axis_rq_tvalid_r && COMPLETED_TAGS)*/) begin
             if(mem_rd_total_tlp_r <= mem_rd_current_tlp_r) begin
               wr_state <= WAIT_READ;
             end else begin
@@ -839,7 +875,7 @@ module dma_rq_logic #(
           end
         end
         INIT_READ : begin
-          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY && !(axis_rq_tvalid_r && COMPLETED_TAGS)) begin
+          if((current_tags_s & window_size_mask_r)!=window_size_mask_r && M_AXIS_RQ_TREADY /*&& !(axis_rq_tvalid_r && COMPLETED_TAGS)*/) begin
             if((mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r+1) || mem_rd_number_even_tlp_r==1 ) begin
               mem_rd_remaining_words_r <= mem_rd_odd_tlp_words_r;
             end else begin
@@ -849,7 +885,7 @@ module dma_rq_logic #(
             if(mem_rd_number_even_tlp_r == mem_rd_current_tlp_modulus_r) begin
               mem_rd_addr_pointed_by_descriptor_r <= tx_rd_addr_s;
             end else begin
-              mem_rd_addr_pointed_by_descriptor_r <= mem_wr_addr_pointed_by_descriptor_r + (current_rd_tlp_words_s[10:0]<<2);
+              mem_rd_addr_pointed_by_descriptor_r <= mem_rd_addr_pointed_by_descriptor_r + (current_rd_tlp_words_s[10:0]<<2);
             end
           end
         end
