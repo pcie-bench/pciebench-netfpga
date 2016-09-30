@@ -187,7 +187,7 @@ module dma_rc_logic #(
           completed_tags_r[j] <= 1'b0;
         end else begin
           completed_tags_r[j] <=  !COMPLETED_TAGS[j] && BUSY_TAGS[j] && (S_AXIS_RC_TVALID && S_AXIS_RC_TREADY && S_AXIS_RC_TLAST )
-              && ((is_tag_count_exceeded_r[j]) // We exceed the requested size. Take into account completions in one pulse
+              && ((is_tag_count_exceeded_r[j] && j==tlp_tag_r) // We exceed the requested size. Take into account completions in one pulse
                 || (is_rc_sop_r && j==tlp_tag_s && tlp_dwords_s<=5 && tlp_dwords_s>=difference_r[j]));
         end
       end      
