@@ -33,7 +33,7 @@
 #include <linux/sched.h>
 #include <linux/fs_struct.h>
 #include <linux/hugetlb.h>
-
+#include <linux/version.h>
 
 
 static int        num_pages = 0;    /**< Number of 4KB pages in the HP file system */
@@ -75,7 +75,19 @@ static int getUserHugePages (struct dma_buffer *db, struct nfp_card *card, struc
   /* Ensure that all userspace pages are locked in memory for the */
   /* duration of the DMA transfer */
   down_read (&current->mm->mmap_sem);
-  ret = get_user_pages (current,
+  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+    /*
+    long get_user_pages(unsigned long start, unsigned long nr_pages,
+          unsigned int gup_flags, struct page **pages,
+          struct vm_area_struct **vmas); */
+    ret = get_user_pages(udata, npages, FOLL_WRITE, pag, NULL);
+  #else
+    /*
+    long get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+        unsigned long start, unsigned long nr_pages,
+        int write, int force, struct page **pages,
+        struct vm_area_struct **vmas); */
+    ret = get_user_pages (current,
                         current->mm,
                         udata,
                         npages,
@@ -83,6 +95,8 @@ static int getUserHugePages (struct dma_buffer *db, struct nfp_card *card, struc
                         0,         /* Force */
                         pag,
                         NULL);
+
+  #endif
   up_read (&current->mm->mmap_sem);
 
   num_huge_pages = db->length;
@@ -121,9 +135,17 @@ static void forgetUserHugePages (struct page **pages, int num_pages)
 
     if (!PageReserved (pages[i])) {
       SetPageDirty (pages[i]);
-      page_cache_release (pages[i]);
+      #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+        put_page (pages[i]);
+      #else
+        page_cache_release (pages[i]);
+      #endif
     } else {
-      page_cache_release (pages[i]);
+      #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+        put_page (pages[i]);
+      #else
+        page_cache_release (pages[i]);
+      #endif
     }
 
     up_read (&current->mm->mmap_sem);

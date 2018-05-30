@@ -125,7 +125,7 @@ static uint32_t etoi(char* string)   // 'Everything to int'
     uint32_t tdword  = 0;
     uint32_t multp  = 1;
     uint32_t multd  = 1;
-    char cnt, cchar;
+    char cnt=0, cchar;
     for (i = length - 1; i >= 0; i--) {
 
       if (cnt % 4 == 0 && cnt != 0) {

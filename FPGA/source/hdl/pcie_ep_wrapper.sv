@@ -25,7 +25,7 @@
 
 `timescale 1ps / 1ps
 `default_nettype none
-`define VERSION_VIVADO_2014_4
+//`define VERSION_VIVADO_2014_4
 
 
 module pcie_ep_wrapper (
@@ -192,7 +192,7 @@ module pcie_ep_wrapper (
   wire [ 3:0] cfg_interrupt_int                ; // input
   wire [ 1:0] cfg_interrupt_pending            ; // input
   wire        cfg_interrupt_sent               ; // output
-  
+
 
   IBUF sys_reset_n_ibuf (.O(sys_rst_n_c), .I(pcie_rst_n));
 
@@ -220,15 +220,15 @@ module pcie_ep_wrapper (
     //---------------------------------------------------------------------------------------//
     //  PCI Express (pci_exp) Interface                                                      //
     //---------------------------------------------------------------------------------------//
-    
+
     // Tx
     .pci_exp_txn                      (pcie_tx_n                         ),
     .pci_exp_txp                      (pcie_tx_p                         ),
-    
+
     // Rx
     .pci_exp_rxn                      (pcie_rx_n                         ),
     .pci_exp_rxp                      (pcie_rx_p                         ),
-    
+
     //---------------------------------------------------------------------------------------------------------------//
     // Clock & GT COMMON Sharing Interface                                                                        //
     //---------------------------------------------------------------------------------------------------------------//
@@ -242,58 +242,58 @@ module pcie_ep_wrapper (
     .pipe_mmcm_lock_out               (                                  ),
     .pipe_pclk_sel_slave              ({PL_LINK_CAP_MAX_LINK_WIDTH{1'b0}}),
     .pipe_mmcm_rst_n                  (pipe_mmcm_rst_n                   ),
-    
+
     //---------------------------------------------------------------------------------------//
     //  AXI Interface                                                                        //
     //---------------------------------------------------------------------------------------//
-    
+
     .user_clk                         (user_clk                          ), // output
     .user_reset                       (user_reset                        ), // output
     .user_lnk_up                      (user_lnk_up                       ), // output
     .user_app_rdy                     (user_app_rdy                      ), // output
-    
+
     .s_axis_rq_tlast                  (s_axis_rq_tlast                   ), // input
     .s_axis_rq_tdata                  (s_axis_rq_tdata                   ), // input  [C_DATA_WIDTH-1:0]
     .s_axis_rq_tuser                  (s_axis_rq_tuser                   ), // input  [59:0]
     .s_axis_rq_tkeep                  (s_axis_rq_tkeep                   ), // input  [KEEP_WIDTH-1:0]
     .s_axis_rq_tready                 (s_axis_rq_tready_array            ), // output [3:0]
     .s_axis_rq_tvalid                 (s_axis_rq_tvalid                  ), // input
-    
+
     .m_axis_rc_tdata                  (m_axis_rc_tdata                   ), // output  [C_DATA_WIDTH-1:0]
     .m_axis_rc_tuser                  (m_axis_rc_tuser                   ), // output  [74:0]
     .m_axis_rc_tlast                  (m_axis_rc_tlast                   ), // output
     .m_axis_rc_tkeep                  (m_axis_rc_tkeep                   ), // output  [KEEP_WIDTH-1:0]
     .m_axis_rc_tvalid                 (m_axis_rc_tvalid                  ), // output
     .m_axis_rc_tready                 (m_axis_rc_tready_array            ), // input   [21:0]
-    
+
     .m_axis_cq_tdata                  (m_axis_cq_tdata                   ), // output  [C_DATA_WIDTH-1:0]
     .m_axis_cq_tuser                  (m_axis_cq_tuser                   ), // output  [84:0]
     .m_axis_cq_tlast                  (m_axis_cq_tlast                   ), // output
     .m_axis_cq_tkeep                  (m_axis_cq_tkeep                   ), // output  [KEEP_WIDTH-1:0]
     .m_axis_cq_tvalid                 (m_axis_cq_tvalid                  ), // output
     .m_axis_cq_tready                 (m_axis_cq_tready_array            ), // input   [21:0]
-    
+
     .s_axis_cc_tdata                  (s_axis_cc_tdata                   ), // input  [C_DATA_WIDTH-1:0]
     .s_axis_cc_tuser                  (s_axis_cc_tuser                   ), // input  [32:0]
     .s_axis_cc_tlast                  (s_axis_cc_tlast                   ), // input
     .s_axis_cc_tkeep                  (s_axis_cc_tkeep                   ), // input  [KEEP_WIDTH-1:0]
     .s_axis_cc_tvalid                 (s_axis_cc_tvalid                  ), // input
     .s_axis_cc_tready                 (s_axis_cc_tready_array            ), // output  [3:0]
-    
+
     //--------------------------------------------------------------------------
     //  Configuration (CFG) Interface
     //--------------------------------------------------------------------------
-    
+
     .pcie_tfc_nph_av                  (pcie_tfc_nph_av                   ), // output  [1:0]
     .pcie_tfc_npd_av                  (pcie_tfc_npd_av                   ), // output  [1:0]
     .pcie_rq_seq_num                  (pcie_rq_seq_num                   ), // output  [3:0]
     .pcie_rq_seq_num_vld              (pcie_rq_seq_num_vld               ), // output
     .pcie_rq_tag                      (pcie_rq_tag                       ), // output  [5:0]
     .pcie_rq_tag_vld                  (pcie_rq_tag_vld                   ), // output
-    
+
     .pcie_cq_np_req                   (pcie_cq_np_req                    ), // input
     .pcie_cq_np_req_count             (pcie_cq_np_req_count              ), // output  [5:0]
-    
+
     .cfg_phy_link_down                (cfg_phy_link_down                 ), // output
     .cfg_phy_link_status              (                                  ), // output  [1:0]
     .cfg_negotiated_width             (cfg_negotiated_width              ), // output  [3:0]
@@ -305,24 +305,24 @@ module pcie_ep_wrapper (
     .cfg_vf_status                    (cfg_vf_status                     ), // output  [11:0]
     .cfg_vf_power_state               (cfg_vf_power_state                ), // output  [17:0]
     .cfg_link_power_state             (cfg_link_power_state              ), // output  [1:0]
-    
+
     // Error Reporting Interface                                                // Error Reporting Interface
     .cfg_err_cor_out                  (cfg_err_cor_out                   ), // output
     .cfg_err_nonfatal_out             (cfg_err_nonfatal_out              ), // output
     .cfg_err_fatal_out                (cfg_err_fatal_out                 ), // output
-    
+
     .cfg_ltr_enable                   (cfg_ltr_enable                    ), // output
     .cfg_ltssm_state                  (cfg_ltssm_state                   ), // output  [5:0]
     .cfg_rcb_status                   (cfg_rcb_status                    ), // output  [1:0]
     .cfg_dpa_substate_change          (cfg_dpa_substate_change           ), // output  [1:0]
     .cfg_obff_enable                  (cfg_obff_enable                   ), // output  [1:0]
     .cfg_pl_status_change             (cfg_pl_status_change              ), // output
-    
+
     .cfg_tph_requester_enable         (cfg_tph_requester_enable          ), // output  [1:0]
     .cfg_tph_st_mode                  (cfg_tph_st_mode                   ), // output  [5:0]
     .cfg_vf_tph_requester_enable      (cfg_vf_tph_requester_enable       ), // output  [5:0]
     .cfg_vf_tph_st_mode               (cfg_vf_tph_st_mode                ), // output  [17:0]
-    
+
     // Management Interface                                                     // Management Interface
     .cfg_mgmt_addr                    (cfg_mgmt_addr                     ), // input  [18:0]
     .cfg_mgmt_write                   (cfg_mgmt_write                    ), // input
@@ -370,6 +370,7 @@ module pcie_ep_wrapper (
     .cfg_vf_flr_in_process            (cfg_vf_flr_in_process             ), // output  [5:0]
     .cfg_vf_flr_done                  (cfg_vf_flr_done                   ), // input   [5:0]
     .cfg_link_training_enable         (cfg_link_training_enable          ), // input
+`ifdef VERSION_VIVADO_2014_4
     .cfg_ext_read_received            (cfg_ext_read_received             ), // output
     .cfg_ext_write_received           (cfg_ext_write_received            ), // output
     .cfg_ext_register_number          (cfg_ext_register_number           ), // output  [9:0]
@@ -378,15 +379,16 @@ module pcie_ep_wrapper (
     .cfg_ext_write_byte_enable        (cfg_ext_write_byte_enable         ), // output  [3:0]
     .cfg_ext_read_data                (cfg_ext_read_data                 ), // input   [31:0]
     .cfg_ext_read_data_valid          (cfg_ext_read_data_valid           ), // input
+`endif
     //--------------------------------------------------------------------------
     // EP Only
     //--------------------------------------------------------------------------
-    
+
     // Interrupt Interface Signals
     .cfg_interrupt_int                (cfg_interrupt_int                 ), // input   [3:0]
     .cfg_interrupt_pending            (cfg_interrupt_pending             ), // input   [1:0]
     .cfg_interrupt_sent               (cfg_interrupt_sent                ), // output
-   
+
     //----------------------------------------------------------------------------//
     //  System(SYS) Interface                                                     //
     //----------------------------------------------------------------------------//
