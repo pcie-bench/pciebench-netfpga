@@ -25,20 +25,20 @@ The design is limited to machines that verify:
   * For Ubuntu:
   
   ```
-  sudo apt-get install gcc make linux-headers-$(uname -r) #Ubuntu
+  sudo apt-get install gcc g++ make cmake linux-headers-$(uname -r) #Ubuntu
   ```
   
   * For RHEL/CentOS/Oracle Linux:
   
   ```
   su -
-  yum install gcc make kernel kernel-devel  #RHEL/CentOS
+  yum install gcc g++ make cmake kernel kernel-devel  #RHEL/CentOS
   ```
 
 * The benchmark approach uses different types of **memory**:
 
-  1. A buffer of **kernel pages**. The total amount of memory that can be alloced is, usually, limited to a few MiB.
-  2. Alternatively, **huge pages** (pages of non-standard size) lead to tests which involve larger transferences. A greater performance and more stressful tasks can be prepared with this memory management option. They are plenty support in recent kernels and there is no need to recompile or build additional modules to the kernel. By default, 1 hugepage of size 1 GiB is used for the tests.
+  1. A buffer of **kernel pages**. The total amount of memory that can be allocated is, usually, limited to a few MiB.
+  2. Alternatively, **huge pages** (pages of non-standard size) lead to tests which involve larger transferences. A greater performance and more stressful tasks can be prepared with this memory management option. They are plenty supported in recent kernels and there is no need to recompile or build additional modules to the kernel. By default, 1 hugepage of size 1 GiB is used for the tests.
    
   In order to use huge pages, some **kernel parameters** have to be included. For this purpose:
   1. Edit the entries under grub:
@@ -47,10 +47,12 @@ The design is limited to machines that verify:
   sudo gedit /etc/default/grub
   ```
 
-  2. Find the line starting with *GRUB_CMDLINE_LINUX_DEFAULT*. We will configure 2 pages for this case (*Vivado might use some of the huge pages* so be careful with this detail):
+  2. Find the line starting with *GRUB_CMDLINE_LINUX_DEFAULT* (*GRUB_CMDLINE_LINUX* if you are using Ubuntu 18.04). We will configure 2 pages for this case (*Vivado might use some of the huge pages* so be careful with this detail):
 
   ```
   GRUB_CMDLINE_LINUX_DEFAULT="default_hugepagesz=1G hugepagesz=1G hugepages=2 ... previous options ..."
+  # Under Ubuntu 18.04
+  # GRUB_CMDLINE_LINUX="default_hugepagesz=1G hugepagesz=1G hugepages=2 ... previous options ..."
   ```
 
   3. Finally update GRUB's configuration file
@@ -66,24 +68,7 @@ The design is limited to machines that verify:
   source /opt/Xilinx/Vivado/2014.4/settings64.sh
   ```
 
-  where */opt/Xilinx/Vivado/2014.4* is the installation directory of the Xilinx packages.
-
-
-* Configuration for the measure of the bandwidth in the device to host direction
-
-Given the fact that no acknowledge from the memory controller is received while performing memory write requests, the bandwidth cannot be estimated based on a single transactions. For this purpose, an intermmediate FIFO that holds the TLPs prior to their delivery is inserted into the design.
-
-This is the only case where is necessary to use this intermmediate buffer and the design is needed to be generated concienciously. The easiest way of performing such action is:
-
-  1. Alter the affected sources.
-  2. Regenerate the project (or resynthesize and implement a previous version). 
-
-The labor is simplified thanks to the wizard.sh script. Option t toggles the project to the mode bandwidth measurement, whilst the option d, returns the sources to the more general version.
-
-```
-  sh wizard.sh
-  # Push d or t according to the preferences
-``` 
+  where */opt/Xilinx/Vivado/2014.4* is the installation directory of the Xilinx packages. This project supports different versions of Vivado. INstead of Vivado 2014.4 you can alternatively select *Vivado 2017.4*. The steps are analogous (replacing the versions)
 
 ## Hierarchy of the project
 
@@ -100,6 +85,8 @@ Two folders can be observed under the root of the git project:
 * wizard.sh: Note that an assistant that lets the user to generate the reference project automatically is provided at the root directory.
 
 ## Building the hardware project
+
+### Manually
 
 If your environment has been previously configured, you just need to clone the repo, "cd" to that path and follow the next steps:
 
@@ -132,6 +119,15 @@ with the name of *pcie_benchmark.bit*.
 
 * */tmp/pcie3_7x_0_example* and */tmp/tmp_project*  are used with the finality of getting some sources from the **IP example design of Xilinx PCIe IP core**. If the path *FPGA/source/hdl/pcie_support/* counts with two files you can ommit the generation of this project whilst generating the IP cores (and Xilinx project) for your board (options v/s of wizard.sh).
 
+### Automatically
+
+If your Vivado executable is available on the path (that happens when you source the settings.sh file), you can use the cmake utility in order to create and generate a bitstream:
+```
+mkdir build
+cd build
+cmake ..
+make fpga 
+```
 
 
 ### Disclaimer
@@ -150,7 +146,9 @@ The possible inconveniences might be related to the dependencies of the project 
   ```
   `define VERSION_VIVADO_2014_4
   ```
-
+* I am not achieving the reference results stated by the authors:
+  * Ensure that the parameters at FPGA/source/hdl/controller/pcie_controller.sv, reflect the configuration of your machine. You must pay attention to C_LOG2_MAX_PAYLOAD and C_LOG2_MAX_READ_REQUEST and update them with the maximum payload and maximum read request of your machine. Such values can be extracted from the command lspci -vvv. 
+  * Ensure that you have disabled the IOMMU. This can be achieved by including the option intel_iommu=off  in your linux booting options.
 
 ## Software
 ###Compiling the software
@@ -244,13 +242,20 @@ Some examples:
 * Test PCIe 4. Transfer 8B from the FPGA to the HOST to random positions inside a buffer of 512MiB
  
   ```
-  sh restart.sh; ./bin/benchmark -d RW -p RAN 0 512m -n 8 -l 1
+  sh restart.sh; ./bin/benchmark -d RW -p RAN 512m -n 8 -l 1
+  ```
+* Test PCIe 5. Transfer 8B from the FPGA to the HOST to random positions inside a buffer of 512MiB and print the bandwidth:
+ 
+  ```
+  sh restart.sh; ./bin/benchmark -t bw -d RW -p RAN 512m -n 8 -l 1
   ```
 
-* Test PCIe 5. Transfer 8B from the FPGA to the HOST to random positions inside a buffer of 512MiB (which is unaligned by 28 bytes)
-  
-  ```
-  sh restart.sh; ./bin/benchmark -d RW -p RAN 28 512m -n 8 -l 1
-  ```
-
-Feel free to explore other options!
+Feel free to explore other options! A simple script has been left at HOST/scripts that iterates over different sizes and prints the results. You can use it as:
+```
+cd HOST/scripts
+sudo sh test.sh
+```
+Remember that you will need gnuplot to visualize the information:
+```
+apt-get install gnuplot-qt
+```

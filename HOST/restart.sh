@@ -26,6 +26,9 @@
 
 
 set -o nounset                              
+if ! [ -x "$(command -v setenforce)" ]; then
+  alias setenforce=true
+fi
 
 ./bin/rwBar w 0 266240 255
 #Disable selinux
