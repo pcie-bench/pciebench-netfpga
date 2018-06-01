@@ -253,7 +253,7 @@ Some examples:
 Feel free to explore other options! A simple script has been left at HOST/scripts that iterates over different sizes and prints the results. You can use it as:
 ```
 cd HOST/scripts
-sudo sh test.sh
+sudo bash test.sh
 ```
 Remember that you will need gnuplot to visualize the information:
 ```
